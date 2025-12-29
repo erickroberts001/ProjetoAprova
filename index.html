@@ -94,6 +94,7 @@
                 audioRef.current.play().catch(e => console.log("Audio play failed", e));
             };
 
+            // Efeito do Timer
             useEffect(() => {
                 let interval = null;
                 if (isActive && mode > 0) {
@@ -105,6 +106,17 @@
                 return () => clearInterval(interval);
             }, [isActive, mode]);
 
+            // Handler Inteligente para Iniciar/Pausar
+            const toggleTimer = () => {
+                if (mode === 0) {
+                    // Se o tempo acabou e clicou em iniciar, reseta para o modo atual
+                    setMode(initialMode);
+                    setIsActive(true);
+                } else {
+                    setIsActive(!isActive);
+                }
+            };
+
             return (
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-6 flex flex-col items-center justify-center">
                     <h3 className="text-gray-500 font-medium mb-2">Cronômetro de Estudos</h3>
@@ -112,8 +124,8 @@
                         {Math.floor(mode / 60).toString().padStart(2, '0')}:{ (mode % 60).toString().padStart(2, '0') }
                     </div>
                     <div className="flex flex-wrap justify-center gap-2 mb-4">
-                         <button onClick={() => setIsActive(!isActive)} className={`px-6 py-2 rounded-lg font-medium text-white transition-colors ${isActive ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-600 hover:bg-blue-700'}`}>
-                            {isActive ? 'Pausar' : 'Iniciar'}
+                         <button onClick={toggleTimer} className={`px-6 py-2 rounded-lg font-medium text-white transition-colors ${isActive ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-600 hover:bg-blue-700'}`}>
+                            {isActive ? 'Pausar' : (mode === 0 ? 'Reiniciar' : 'Iniciar')}
                         </button>
                         {isActive && (
                             <button onClick={() => { setIsActive(false); setMode(0); playSound(); }} className="px-4 py-2 rounded-lg font-medium text-white bg-green-600 hover:bg-green-700 transition-colors flex items-center gap-2">
@@ -377,10 +389,22 @@
                 };
             }, [items]);
 
+            // --- ALGORITMO OTIMIZADO DE CICLO DE ESTUDOS ---
             const studyCycle = useMemo(() => {
                 return [...items]
-                    .map(i => ({ ...i, score: (i.weight * 10) - ((i.theory ? 5 : 0) + (i.revisions * 2)) }))
-                    .sort((a, b) => b.score - a.score)
+                    .map(i => {
+                        let score = 0;
+                        // Regra de Ouro: Se não estudou a teoria, prioridade máxima baseada no peso.
+                        if (!i.theory) {
+                            score = 1000 + (i.weight * 50); 
+                        } else {
+                            // Se teoria já foi vista, entra no modo revisão
+                            // Prioridade aumenta com Peso, diminui com Revisões
+                            score = (i.weight * 20) - (i.revisions * 5);
+                        }
+                        return { ...i, score };
+                    })
+                    .sort((a, b) => b.score - a.score) // Ordem decrescente de score
                     .slice(0, 5);
             }, [items]);
 
@@ -528,7 +552,8 @@
                                                             <th className="px-6 py-3 w-1/3">Tópico</th>
                                                             <th className="px-6 py-3 text-center">Peso</th>
                                                             <th className="px-6 py-3 text-center">Teoria</th>
-                                                            <th className="px-6 py-3 text-center">Rev/Quest</th>
+                                                            <th className="px-6 py-3 text-center">Revisões</th>
+                                                            <th className="px-6 py-3 text-center">Questões</th>
                                                             <th className="px-6 py-3 text-center">Ações</th>
                                                         </tr>
                                                     </thead>
@@ -550,10 +575,18 @@
                                                                 <td className="px-6 py-4 text-center">
                                                                     <button onClick={() => toggleTheory(item.id)} className={`w-6 h-6 rounded border flex items-center justify-center mx-auto transition ${item.theory ? 'bg-green-500 border-green-500 text-white' : 'hover:border-green-500 text-transparent'}`}><Icon name="check" size={14} /></button>
                                                                 </td>
-                                                                <td className="px-6 py-4 text-center">
-                                                                    <div className="flex flex-col gap-1 items-center text-xs">
-                                                                        <div className="flex items-center gap-1"><span className="w-12 text-right">Rev: {item.revisions}</span> <button onClick={()=>updateCount(item.id,'revisions',1)} className="bg-blue-100 text-blue-600 rounded px-1 hover:bg-blue-200">+</button></div>
-                                                                        <div className="flex items-center gap-1"><span className="w-12 text-right">Qst: {item.questions}</span> <button onClick={()=>updateCount(item.id,'questions',10)} className="bg-green-100 text-green-600 rounded px-1 hover:bg-green-200">+10</button></div>
+                                                                <td className="px-6 py-4">
+                                                                    <div className="flex items-center justify-center space-x-2">
+                                                                        <button onClick={() => updateCount(item.id, 'revisions', -1)} className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center">-</button>
+                                                                        <span className="w-8 text-center text-sm font-mono">{item.revisions}</span>
+                                                                        <button onClick={() => updateCount(item.id, 'revisions', 1)} className="w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-600 flex items-center justify-center">+</button>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-6 py-4">
+                                                                    <div className="flex items-center justify-center space-x-2">
+                                                                        <button onClick={() => updateCount(item.id, 'questions', -10)} className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center text-xs">-10</button>
+                                                                        <span className="w-10 text-center text-sm font-mono">{item.questions}</span>
+                                                                        <button onClick={() => updateCount(item.id, 'questions', 10)} className="w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-600 flex items-center justify-center text-xs">+10</button>
                                                                     </div>
                                                                 </td>
                                                                 <td className="px-6 py-4 text-center">
