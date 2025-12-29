@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel CAIXA 2025 - Eng. Mecânica</title>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // --- DADOS INICIAIS (Extraídos do seu script Python) ---
+        const initialData = [
+            { id: 'b1', category: 'Conhecimentos Básicos', subject: 'Língua Portuguesa', topic: 'Compreensão, Gramática, Texto', weight: 1, theory: false, revisions: 0, questions: 0 },
+            { id: 'b2', category: 'Conhecimentos Básicos', subject: 'Língua Inglesa', topic: 'Vocabulário e Gramática Básica', weight: 1, theory: false, revisions: 0, questions: 0 },
+            { id: 'b3', category: 'Conhecimentos Básicos', subject: 'Conhecimentos Digitais', topic: 'Mindset, Agile, Dados, Liderança', weight: 1, theory: false, revisions: 0, questions: 0 },
+            { id: 'b4', category: 'Conhecimentos Básicos', subject: 'Ética e Compliance', topic: 'LGPD, Compliance, Ética CAIXA', weight: 1, theory: false, revisions: 0, questions: 0 },
+            { id: 'b5', category: 'Conhecimentos Básicos', subject: 'Probabilidade e Estatística', topic: 'Estatística Descritiva e Inferencial', weight: 1.5, theory: false, revisions: 0, questions: 0 },
+            
+            { id: 'e1', category: 'Específicos - Eng. Mecânica', subject: '1. Termodinâmica', topic: 'Leis, Gases, Ciclos', weight: 3, theory: false, revisions: 0, questions: 0 },
+            { id: 'e2', category: 'Específicos - Eng. Mecânica', subject: '2. Mecânica dos Fluidos', topic: 'Hidrostática, Escoamento', weight: 3, theory: false, revisions: 0, questions: 0 },
+            { id: 'e3', category: 'Específicos - Eng. Mecânica', subject: '3. Transmissão do Calor', topic: 'Condução, Convecção, Radiação', weight: 2.5, theory: false, revisions: 0, questions: 0 },
+            { id: 'e4', category: 'Específicos - Eng. Mecânica', subject: '4. Resistência dos Materiais', topic: 'Tensões, Deformações, Diagramas', weight: 3, theory: false, revisions: 0, questions: 0 },
+            { id: 'e5', category: 'Específicos - Eng. Mecânica', subject: '5. Elementos de Máquinas', topic: 'Eixos, Engrenagens, Fadiga', weight: 2.5, theory: false, revisions: 0, questions: 0 },
+            { id: 'e6', category: 'Específicos - Eng. Mecânica', subject: '6. Dinâmica', topic: 'Corpos Rígidos, Partículas', weight: 2, theory: false, revisions: 0, questions: 0 },
+            { id: 'e7', category: 'Específicos - Eng. Mecânica', subject: '7. Vibrações Mecânicas', topic: 'Graus de liberdade, Amortecimento', weight: 2, theory: false, revisions: 0, questions: 0 },
+            { id: 'e8', category: 'Específicos - Eng. Mecânica', subject: '8. Máquinas de Fluxo', topic: 'Bombas, Compressores, Turbinas', weight: 3, theory: false, revisions: 0, questions: 0 },
+            { id: 'e9', category: 'Específicos - Eng. Mecânica', subject: '9. Ciclos de Potência', topic: 'Rankine, Brayton', weight: 2.5, theory: false, revisions: 0, questions: 0 },
+            { id: 'e10', category: 'Específicos - Eng. Mecânica', subject: '10. Corrosão', topic: 'Proteção Anticorrosiva', weight: 1.5, theory: false, revisions: 0, questions: 0 },
+            { id: 'e11', category: 'Específicos - Eng. Mecânica', subject: '11. Seleção de Materiais', topic: 'Metálicos e Não Metálicos', weight: 1.5, theory: false, revisions: 0, questions: 0 },
+            { id: 'e12', category: 'Específicos - Eng. Mecânica', subject: '12. Processos de Fabricação', topic: 'Usinagem, Conformação', weight: 2, theory: false, revisions: 0, questions: 0 },
+            { id: 'e13', category: 'Específicos - Eng. Mecânica', subject: '13. Soldagem', topic: 'Processos de Soldagem', weight: 2, theory: false, revisions: 0, questions: 0 },
+            { id: 'e14', category: 'Específicos - Eng. Mecânica', subject: '14. Estatística Aplicada', topic: 'Aplicada à Engenharia', weight: 1.5, theory: false, revisions: 0, questions: 0 },
+            { id: 'e15', category: 'Específicos - Eng. Mecânica', subject: '15. Eletrotécnica', topic: 'Motores e Geradores', weight: 2, theory: false, revisions: 0, questions: 0 },
+            { id: 'e16', category: 'Específicos - Eng. Mecânica', subject: '16. Segurança do Trabalho', topic: 'NRs, EPI, PGR', weight: 2, theory: false, revisions: 0, questions: 0 },
+            { id: 'e17', category: 'Específicos - Eng. Mecânica', subject: '17. Gestão de Projetos', topic: 'PMBOK, Planejamento', weight: 2, theory: false, revisions: 0, questions: 0 }
+        ];
+
+        // --- COMPONENTES ---
+
+        const Icon = ({ name, size = 20, className, onClick }) => {
+            React.useEffect(() => {
+                lucide.createIcons();
+            }, [name]);
+            return <i data-lucide={name} width={size} height={size} className={className} onClick={onClick}></i>;
+        };
+
+        const ProgressBar = ({ value, color = "bg-blue-600" }) => (
+            <div className="w-full bg-gray-200 rounded-full h-2.5">
+                <div className={`${color} h-2.5 rounded-full transition-all duration-500`} style={{ width: `${Math.min(value, 100)}%` }}></div>
+            </div>
+        );
+
+        const StatCard = ({ title, value, subtitle, icon, color }) => (
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4">
+                <div className={`p-3 rounded-lg ${color} bg-opacity-10 text-${color.replace('bg-', '')}`}>
+                    <Icon name={icon} className={color.replace('bg-', 'text-')} />
+                </div>
+                <div>
+                    <h3 className="text-gray-500 text-sm font-medium">{title}</h3>
+                    <p className="text-2xl font-bold text-gray-800">{value}</p>
+                    {subtitle && <p className="text-xs text-gray-400">{subtitle}</p>}
+                </div>
+            </div>
+        );
+
+        const Timer = () => {
+            const [seconds, setSeconds] = useState(0);
+            const [isActive, setIsActive] = useState(false);
+            const [mode, setMode] = useState(25 * 60); // 25 min default
+
+            useEffect(() => {
+                let interval = null;
+                if (isActive && mode > 0) {
+                    interval = setInterval(() => {
+                        setMode(prev => prev - 1);
+                        setSeconds(prev => prev + 1);
+                    }, 1000);
+                } else if (mode === 0) {
+                    setIsActive(false);
+                    // Play sound or alert could go here
+                }
+                return () => clearInterval(interval);
+            }, [isActive, mode]);
+
+            const formatTime = (totalSeconds) => {
+                const mins = Math.floor(totalSeconds / 60);
+                const secs = totalSeconds % 60;
+                return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            };
+
+            return (
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-6 flex flex-col items-center justify-center">
+                    <h3 className="text-gray-500 font-medium mb-2">Cronômetro de Estudos</h3>
+                    <div className="text-5xl font-mono font-bold text-gray-800 mb-4 tracking-wider">
+                        {formatTime(mode)}
+                    </div>
+                    <div className="flex space-x-3">
+                        <button 
+                            onClick={() => setIsActive(!isActive)}
+                            className={`px-6 py-2 rounded-lg font-medium text-white transition-colors ${isActive ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-600 hover:bg-blue-700'}`}
+                        >
+                            {isActive ? 'Pausar' : 'Iniciar'}
+                        </button>
+                        <button 
+                            onClick={() => { setIsActive(false); setMode(25*60); }}
+                            className="px-6 py-2 rounded-lg font-medium text-gray-600 bg-gray-100 hover:bg-gray-200"
+                        >
+                            Resetar
+                        </button>
+                    </div>
+                    <div className="mt-4 flex space-x-2 text-xs">
+                        <button onClick={() => { setIsActive(false); setMode(25*60); }} className="px-3 py-1 bg-blue-50 text-blue-600 rounded">Pomodoro (25m)</button>
+                        <button onClick={() => { setIsActive(false); setMode(50*60); }} className="px-3 py-1 bg-blue-50 text-blue-600 rounded">Longo (50m)</button>
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [activeTab, setActiveTab] = useState('dashboard');
+            const [items, setItems] = useState(() => {
+                const saved = localStorage.getItem('caixaStudyData');
+                return saved ? JSON.parse(saved) : initialData;
+            });
+            const [showAddForm, setShowAddForm] = useState(false);
+            const [newItem, setNewItem] = useState({
+                category: 'Conhecimentos Básicos',
+                subject: '',
+                topic: '',
+                weight: 1
+            });
+
+            useEffect(() => {
+                localStorage.setItem('caixaStudyData', JSON.stringify(items));
+            }, [items]);
+
+            // --- AÇÕES ---
+            const toggleTheory = (id) => {
+                setItems(prev => prev.map(item => item.id === id ? { ...item, theory: !item.theory } : item));
+            };
+
+            const updateCount = (id, field, delta) => {
+                setItems(prev => prev.map(item => {
+                    if (item.id === id) {
+                        const newVal = Math.max(0, item[field] + delta);
+                        return { ...item, [field]: newVal };
+                    }
+                    return item;
+                }));
+            };
+
+            const updateWeight = (id, newWeight) => {
+                setItems(prev => prev.map(item => item.id === id ? { ...item, weight: parseFloat(newWeight) } : item));
+            };
+
+            const addItem = (e) => {
+                e.preventDefault();
+                if (!newItem.subject || !newItem.topic) return;
+
+                const newId = 'custom_' + Date.now();
+                setItems(prev => [...prev, {
+                    id: newId,
+                    category: newItem.category,
+                    subject: newItem.subject,
+                    topic: newItem.topic,
+                    weight: parseFloat(newItem.weight),
+                    theory: false,
+                    revisions: 0,
+                    questions: 0
+                }]);
+                
+                // Reset form
+                setNewItem({
+                    category: 'Conhecimentos Básicos',
+                    subject: '',
+                    topic: '',
+                    weight: 1
+                });
+                setShowAddForm(false);
+            };
+
+            const deleteItem = (id) => {
+                if (window.confirm('Tem certeza que deseja remover este tópico?')) {
+                    setItems(prev => prev.filter(item => item.id !== id));
+                }
+            };
+
+            // --- CÁLCULOS E ESTATÍSTICAS ---
+            const stats = useMemo(() => {
+                const totalItems = items.length;
+                const theoryDone = items.filter(i => i.theory).length;
+                const totalQuestions = items.reduce((acc, curr) => acc + curr.questions, 0);
+                const totalRevisions = items.reduce((acc, curr) => acc + curr.revisions, 0);
+                const progress = totalItems === 0 ? 0 : Math.round((theoryDone / totalItems) * 100);
+                
+                return { totalItems, theoryDone, totalQuestions, totalRevisions, progress };
+            }, [items]);
+
+            // Lógica do Ciclo de Estudos
+            const studyCycle = useMemo(() => {
+                const scoredItems = items.map(item => ({
+                    ...item,
+                    priorityScore: (item.weight * 10) - ((item.theory ? 5 : 0) + (item.revisions * 2))
+                }));
+                return scoredItems.sort((a, b) => b.priorityScore - a.priorityScore).slice(0, 5);
+            }, [items]);
+
+            const groupedItems = useMemo(() => {
+                return items.reduce((acc, item) => {
+                    if (!acc[item.category]) acc[item.category] = [];
+                    acc[item.category].push(item);
+                    return acc;
+                }, {});
+            }, [items]);
+
+            const existingCategories = useMemo(() => {
+                return Array.from(new Set(items.map(i => i.category))).concat('Nova Categoria...');
+            }, [items]);
+
+            return (
+                <div className="flex min-h-screen">
+                    {/* Sidebar */}
+                    <aside className="w-64 bg-slate-900 text-white flex-shrink-0 hidden md:flex flex-col">
+                        <div className="p-6 border-b border-slate-800">
+                            <h1 className="text-xl font-bold flex items-center gap-2">
+                                <Icon name="book-open" className="text-blue-400" />
+                                CAIXA 2025
+                            </h1>
+                            <p className="text-xs text-slate-400 mt-1">Engenharia Mecânica</p>
+                        </div>
+                        <nav className="flex-1 p-4 space-y-2">
+                            <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'dashboard' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
+                                <Icon name="layout-dashboard" size={18} /> Dashboard
+                            </button>
+                            <button onClick={() => setActiveTab('tracker')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'tracker' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
+                                <Icon name="list-checks" size={18} /> Edital Verticalizado
+                            </button>
+                            <button onClick={() => setActiveTab('cycle')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'cycle' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
+                                <Icon name="refresh-cw" size={18} /> Ciclo de Estudos
+                            </button>
+                        </nav>
+                        <div className="p-4 border-t border-slate-800 text-xs text-slate-500 text-center">
+                            Foco na aprovação! 🚀
+                        </div>
+                    </aside>
+
+                    {/* Mobile Header */}
+                    <div className="md:hidden fixed top-0 w-full bg-slate-900 text-white z-50 p-4 flex justify-between items-center">
+                        <span className="font-bold">CAIXA 2025</span>
+                        <div className="flex gap-4">
+                            <button onClick={() => setActiveTab('dashboard')}><Icon name="layout-dashboard" /></button>
+                            <button onClick={() => setActiveTab('tracker')}><Icon name="list-checks" /></button>
+                            <button onClick={() => setActiveTab('cycle')}><Icon name="refresh-cw" /></button>
+                        </div>
+                    </div>
+
+                    {/* Main Content */}
+                    <main className="flex-1 p-6 md:p-8 mt-14 md:mt-0 overflow-y-auto h-screen custom-scrollbar">
+                        
+                        {/* --- VIEW: DASHBOARD --- */}
+                        {activeTab === 'dashboard' && (
+                            <div className="max-w-5xl mx-auto animate-fade-in">
+                                <h2 className="text-2xl font-bold text-gray-800 mb-6">Visão Geral</h2>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                                    <StatCard title="Progresso Teórico" value={`${stats.progress}%`} subtitle={`${stats.theoryDone}/${stats.totalItems} tópicos`} icon="book" color="bg-blue-600" />
+                                    <StatCard title="Questões Feitas" value={stats.totalQuestions} subtitle="Acumulado total" icon="check-circle" color="bg-green-600" />
+                                    <StatCard title="Revisões" value={stats.totalRevisions} subtitle="Ciclos completados" icon="rotate-cw" color="bg-purple-600" />
+                                    <StatCard title="Dias Restantes" value="--" subtitle="Defina sua meta" icon="calendar" color="bg-orange-500" />
+                                </div>
+
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                    <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                                        <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Icon name="bar-chart-2" size={18} /> Distribuição por Disciplina</h3>
+                                        <div className="space-y-4">
+                                            {Object.entries(groupedItems).map(([category, catItems]) => {
+                                                const catTheory = catItems.filter(i => i.theory).length;
+                                                const catProgress = Math.round((catTheory / catItems.length) * 100);
+                                                return (
+                                                    <div key={category}>
+                                                        <div className="flex justify-between text-sm mb-1">
+                                                            <span className="text-gray-600 font-medium">{category}</span>
+                                                            <span className="text-gray-900 font-bold">{catProgress}%</span>
+                                                        </div>
+                                                        <ProgressBar value={catProgress} color={category.includes('Básicos') ? 'bg-indigo-500' : 'bg-teal-500'} />
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <Timer />
+                                        <div className="bg-gradient-to-br from-blue-600 to-blue-800 text-white p-6 rounded-xl shadow-lg">
+                                            <h3 className="font-bold text-lg mb-2">Próximo Passo</h3>
+                                            <p className="text-blue-100 text-sm mb-4">Com base no seu ciclo, sugerimos focar em:</p>
+                                            {studyCycle.length > 0 ? (
+                                                <div className="bg-white/10 p-4 rounded-lg backdrop-blur-sm border border-white/20">
+                                                    <span className="text-xs uppercase tracking-wider text-blue-200 font-bold">{studyCycle[0]?.category}</span>
+                                                    <h4 className="font-bold text-lg leading-tight mt-1">{studyCycle[0]?.subject}</h4>
+                                                    <p className="text-sm mt-2 opacity-90">{studyCycle[0]?.topic}</p>
+                                                </div>
+                                            ) : (
+                                                <div className="bg-white/10 p-4 rounded-lg backdrop-blur-sm border border-white/20">
+                                                    <p>Parabéns! Você completou tudo.</p>
+                                                </div>
+                                            )}
+                                            <button onClick={() => setActiveTab('cycle')} className="w-full mt-4 py-2 bg-white text-blue-800 font-bold rounded-lg text-sm hover:bg-blue-50 transition-colors">
+                                                Ver Ciclo Completo
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* --- VIEW: TRACKER (EDITAL) --- */}
+                        {activeTab === 'tracker' && (
+                            <div className="max-w-6xl mx-auto">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-2xl font-bold text-gray-800">Edital Verticalizado</h2>
+                                    <div className="flex gap-3 items-center">
+                                        <div className="text-sm text-gray-500 bg-white px-4 py-2 rounded-lg shadow-sm">
+                                            Total: {items.length} Tópicos
+                                        </div>
+                                        <button 
+                                            onClick={() => setShowAddForm(!showAddForm)}
+                                            className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-sm text-sm font-medium hover:bg-blue-700 transition flex items-center gap-2"
+                                        >
+                                            <Icon name={showAddForm ? "x" : "plus"} size={16} />
+                                            {showAddForm ? "Cancelar" : "Adicionar Tópico"}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {showAddForm && (
+                                    <div className="bg-white p-6 rounded-xl shadow-md border border-blue-100 mb-8 animate-fade-in">
+                                        <h3 className="font-bold text-gray-800 mb-4">Adicionar Novo Conteúdo</h3>
+                                        <form onSubmit={addItem} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                                            <div className="lg:col-span-1">
+                                                <label className="block text-xs font-medium text-gray-500 mb-1">Categoria</label>
+                                                <select 
+                                                    value={newItem.category} 
+                                                    onChange={e => setNewItem({...newItem, category: e.target.value})}
+                                                    className="w-full p-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                                >
+                                                    {existingCategories.map(cat => (
+                                                        <option key={cat} value={cat}>{cat}</option>
+                                                    ))}
+                                                </select>
+                                                {newItem.category === 'Nova Categoria...' && (
+                                                     <input 
+                                                        type="text" 
+                                                        placeholder="Digite o nome da categoria"
+                                                        className="w-full mt-2 p-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                                        onBlur={(e) => {
+                                                            if(e.target.value) setNewItem({...newItem, category: e.target.value})
+                                                        }}
+                                                    />
+                                                )}
+                                            </div>
+                                            <div className="lg:col-span-1">
+                                                <label className="block text-xs font-medium text-gray-500 mb-1">Disciplina</label>
+                                                <input 
+                                                    type="text" 
+                                                    required
+                                                    value={newItem.subject} 
+                                                    onChange={e => setNewItem({...newItem, subject: e.target.value})}
+                                                    placeholder="Ex: Física, Redação..."
+                                                    className="w-full p-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                                />
+                                            </div>
+                                            <div className="lg:col-span-2">
+                                                <label className="block text-xs font-medium text-gray-500 mb-1">Tópico/Assunto</label>
+                                                <input 
+                                                    type="text" 
+                                                    required
+                                                    value={newItem.topic} 
+                                                    onChange={e => setNewItem({...newItem, topic: e.target.value})}
+                                                    placeholder="Ex: Leis de Newton..."
+                                                    className="w-full p-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                                />
+                                            </div>
+                                            <div className="lg:col-span-1">
+                                                <label className="block text-xs font-medium text-gray-500 mb-1">Peso</label>
+                                                <input 
+                                                    type="number" 
+                                                    step="0.1" 
+                                                    min="0.1"
+                                                    value={newItem.weight} 
+                                                    onChange={e => setNewItem({...newItem, weight: e.target.value})}
+                                                    className="w-full p-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                                />
+                                            </div>
+                                            <div className="lg:col-span-5 flex justify-end">
+                                                <button type="submit" className="bg-green-600 text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition">
+                                                    Salvar Novo Tópico
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                )}
+
+                                <div className="space-y-8">
+                                    {Object.entries(groupedItems).map(([category, catItems]) => (
+                                        <div key={category} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                                            <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                                                <h3 className="font-bold text-gray-800">{category}</h3>
+                                                <span className="text-xs font-semibold px-2 py-1 bg-gray-200 text-gray-600 rounded">
+                                                    Peso Médio: {(catItems.reduce((a, b) => a + b.weight, 0) / catItems.length).toFixed(1)}
+                                                </span>
+                                            </div>
+                                            <div className="overflow-x-auto">
+                                                <table className="w-full text-left border-collapse">
+                                                    <thead>
+                                                        <tr className="text-xs text-gray-500 uppercase bg-gray-50/50">
+                                                            <th className="px-6 py-3 font-medium w-1/4">Disciplina</th>
+                                                            <th className="px-6 py-3 font-medium w-1/3">Tópico</th>
+                                                            <th className="px-6 py-3 font-medium text-center">Peso</th>
+                                                            <th className="px-6 py-3 font-medium text-center">Teoria</th>
+                                                            <th className="px-6 py-3 font-medium text-center">Revisões</th>
+                                                            <th className="px-6 py-3 font-medium text-center">Questões</th>
+                                                            <th className="px-6 py-3 font-medium text-center w-10"></th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-gray-100">
+                                                        {catItems.map(item => (
+                                                            <tr key={item.id} className="hover:bg-blue-50/30 transition-colors group">
+                                                                <td className="px-6 py-4 text-sm font-medium text-gray-900">{item.subject}</td>
+                                                                <td className="px-6 py-4 text-sm text-gray-600">{item.topic}</td>
+                                                                <td className="px-6 py-4 text-center">
+                                                                    <input 
+                                                                        type="number" 
+                                                                        step="0.5" 
+                                                                        value={item.weight}
+                                                                        onChange={(e) => updateWeight(item.id, e.target.value)}
+                                                                        className="w-16 text-center text-sm border border-gray-200 rounded p-1 focus:ring-2 focus:ring-blue-500 outline-none"
+                                                                    />
+                                                                </td>
+                                                                <td className="px-6 py-4 text-center">
+                                                                    <button 
+                                                                        onClick={() => toggleTheory(item.id)}
+                                                                        className={`w-6 h-6 rounded border flex items-center justify-center mx-auto transition-all ${item.theory ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 text-transparent hover:border-green-500'}`}
+                                                                    >
+                                                                        <Icon name="check" size={14} />
+                                                                    </button>
+                                                                </td>
+                                                                <td className="px-6 py-4">
+                                                                    <div className="flex items-center justify-center space-x-2">
+                                                                        <button onClick={() => updateCount(item.id, 'revisions', -1)} className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center">-</button>
+                                                                        <span className="w-8 text-center text-sm font-mono">{item.revisions}</span>
+                                                                        <button onClick={() => updateCount(item.id, 'revisions', 1)} className="w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-600 flex items-center justify-center">+</button>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-6 py-4">
+                                                                    <div className="flex items-center justify-center space-x-2">
+                                                                        <button onClick={() => updateCount(item.id, 'questions', -10)} className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center text-xs">-10</button>
+                                                                        <span className="w-10 text-center text-sm font-mono">{item.questions}</span>
+                                                                        <button onClick={() => updateCount(item.id, 'questions', 10)} className="w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-600 flex items-center justify-center text-xs">+10</button>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-6 py-4 text-center">
+                                                                     <button 
+                                                                        onClick={() => deleteItem(item.id)}
+                                                                        className="text-gray-300 hover:text-red-500 transition-colors p-1"
+                                                                        title="Excluir tópico"
+                                                                    >
+                                                                        <Icon name="trash-2" size={16} />
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* --- VIEW: CYCLE (CICLO) --- */}
+                        {activeTab === 'cycle' && (
+                            <div className="max-w-4xl mx-auto">
+                                <h2 className="text-2xl font-bold text-gray-800 mb-2">Ciclo de Estudos Inteligente</h2>
+                                <p className="text-gray-600 mb-8">
+                                    Baseado no peso das matérias e no que você ainda não completou.
+                                </p>
+
+                                <div className="space-y-4">
+                                    {studyCycle.map((item, index) => (
+                                        <div key={item.id} className="relative bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-all hover:shadow-md hover:border-blue-200">
+                                            <div className="absolute -left-2 top-6 w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold shadow-lg z-10">
+                                                {index + 1}
+                                            </div>
+                                            
+                                            <div className="pl-6 flex-1">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className={`text-xs px-2 py-0.5 rounded font-bold ${item.category.includes('Básicos') ? 'bg-indigo-100 text-indigo-700' : 'bg-teal-100 text-teal-700'}`}>
+                                                        {item.category}
+                                                    </span>
+                                                    <span className="text-xs text-gray-400 font-mono">Peso: {item.weight}</span>
+                                                </div>
+                                                <h3 className="text-lg font-bold text-gray-900">{item.subject}</h3>
+                                                <p className="text-gray-600 mt-1">{item.topic}</p>
+                                            </div>
+
+                                            <div className="flex flex-col items-end gap-2 pl-6 md:pl-0 w-full md:w-auto">
+                                                <div className="flex items-center gap-4 text-sm text-gray-500">
+                                                    <span className="flex items-center gap-1" title="Questões Feitas"><Icon name="check-circle" size={14} /> {item.questions}</span>
+                                                    <span className="flex items-center gap-1" title="Revisões Feitas"><Icon name="rotate-cw" size={14} /> {item.revisions}</span>
+                                                </div>
+                                                <button 
+                                                    onClick={() => toggleTheory(item.id)}
+                                                    className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors ${item.theory ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700'}`}
+                                                >
+                                                    {item.theory ? 'Concluído' : 'Marcar Conclusão'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                
+                                <div className="mt-8 bg-yellow-50 p-4 rounded-lg border border-yellow-200 text-sm text-yellow-800 flex items-start gap-3">
+                                    <Icon name="info" className="flex-shrink-0 mt-0.5" />
+                                    <p>
+                                        <strong>Como funciona:</strong> Este algoritmo prioriza matérias com <strong>maior peso</strong> que ainda não foram marcadas como "Teoria Concluída" e que possuem poucas revisões. À medida que você estuda e atualiza o painel, a ordem mudará automaticamente.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                        
+                    </main>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
