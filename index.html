@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel Aprova+</title>
+    <title>Plataforma de Estudos - Multiplanos</title>
     
     <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -27,6 +27,8 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
@@ -35,40 +37,26 @@
     <script type="text/babel">
         const { useState, useEffect, useMemo, useRef } = React;
 
-        // --- DADOS INICIAIS (Extraídos do seu script Python) ---
-        const initialData = [
+        // --- TEMPLATE PADRÃO (Dados iniciais do Edital CAIXA) ---
+        const caixaTemplate = [
             { id: 'b1', category: 'Conhecimentos Básicos', subject: 'Língua Portuguesa', topic: 'Compreensão, Gramática, Texto', weight: 1, theory: false, revisions: 0, questions: 0 },
             { id: 'b2', category: 'Conhecimentos Básicos', subject: 'Língua Inglesa', topic: 'Vocabulário e Gramática Básica', weight: 1, theory: false, revisions: 0, questions: 0 },
             { id: 'b3', category: 'Conhecimentos Básicos', subject: 'Conhecimentos Digitais', topic: 'Mindset, Agile, Dados, Liderança', weight: 1, theory: false, revisions: 0, questions: 0 },
             { id: 'b4', category: 'Conhecimentos Básicos', subject: 'Ética e Compliance', topic: 'LGPD, Compliance, Ética CAIXA', weight: 1, theory: false, revisions: 0, questions: 0 },
             { id: 'b5', category: 'Conhecimentos Básicos', subject: 'Probabilidade e Estatística', topic: 'Estatística Descritiva e Inferencial', weight: 1.5, theory: false, revisions: 0, questions: 0 },
-            
             { id: 'e1', category: 'Específicos - Eng. Mecânica', subject: '1. Termodinâmica', topic: 'Leis, Gases, Ciclos', weight: 3, theory: false, revisions: 0, questions: 0 },
             { id: 'e2', category: 'Específicos - Eng. Mecânica', subject: '2. Mecânica dos Fluidos', topic: 'Hidrostática, Escoamento', weight: 3, theory: false, revisions: 0, questions: 0 },
             { id: 'e3', category: 'Específicos - Eng. Mecânica', subject: '3. Transmissão do Calor', topic: 'Condução, Convecção, Radiação', weight: 2.5, theory: false, revisions: 0, questions: 0 },
             { id: 'e4', category: 'Específicos - Eng. Mecânica', subject: '4. Resistência dos Materiais', topic: 'Tensões, Deformações, Diagramas', weight: 3, theory: false, revisions: 0, questions: 0 },
             { id: 'e5', category: 'Específicos - Eng. Mecânica', subject: '5. Elementos de Máquinas', topic: 'Eixos, Engrenagens, Fadiga', weight: 2.5, theory: false, revisions: 0, questions: 0 },
-            { id: 'e6', category: 'Específicos - Eng. Mecânica', subject: '6. Dinâmica', topic: 'Corpos Rígidos, Partículas', weight: 2, theory: false, revisions: 0, questions: 0 },
-            { id: 'e7', category: 'Específicos - Eng. Mecânica', subject: '7. Vibrações Mecânicas', topic: 'Graus de liberdade, Amortecimento', weight: 2, theory: false, revisions: 0, questions: 0 },
-            { id: 'e8', category: 'Específicos - Eng. Mecânica', subject: '8. Máquinas de Fluxo', topic: 'Bombas, Compressores, Turbinas', weight: 3, theory: false, revisions: 0, questions: 0 },
-            { id: 'e9', category: 'Específicos - Eng. Mecânica', subject: '9. Ciclos de Potência', topic: 'Rankine, Brayton', weight: 2.5, theory: false, revisions: 0, questions: 0 },
-            { id: 'e10', category: 'Específicos - Eng. Mecânica', subject: '10. Corrosão', topic: 'Proteção Anticorrosiva', weight: 1.5, theory: false, revisions: 0, questions: 0 },
-            { id: 'e11', category: 'Específicos - Eng. Mecânica', subject: '11. Seleção de Materiais', topic: 'Metálicos e Não Metálicos', weight: 1.5, theory: false, revisions: 0, questions: 0 },
-            { id: 'e12', category: 'Específicos - Eng. Mecânica', subject: '12. Processos de Fabricação', topic: 'Usinagem, Conformação', weight: 2, theory: false, revisions: 0, questions: 0 },
-            { id: 'e13', category: 'Específicos - Eng. Mecânica', subject: '13. Soldagem', topic: 'Processos de Soldagem', weight: 2, theory: false, revisions: 0, questions: 0 },
-            { id: 'e14', category: 'Específicos - Eng. Mecânica', subject: '14. Estatística Aplicada', topic: 'Aplicada à Engenharia', weight: 1.5, theory: false, revisions: 0, questions: 0 },
-            { id: 'e15', category: 'Específicos - Eng. Mecânica', subject: '15. Eletrotécnica', topic: 'Motores e Geradores', weight: 2, theory: false, revisions: 0, questions: 0 },
-            { id: 'e16', category: 'Específicos - Eng. Mecânica', subject: '16. Segurança do Trabalho', topic: 'NRs, EPI, PGR', weight: 2, theory: false, revisions: 0, questions: 0 },
             { id: 'e17', category: 'Específicos - Eng. Mecânica', subject: '17. Gestão de Projetos', topic: 'PMBOK, Planejamento', weight: 2, theory: false, revisions: 0, questions: 0 }
         ];
 
-        // --- COMPONENTES ---
+        // --- COMPONENTES AUXILIARES ---
 
         const Icon = ({ name, size = 20, className, onClick }) => {
             React.useEffect(() => {
-                if (window.lucide) {
-                    window.lucide.createIcons();
-                }
+                if (window.lucide) window.lucide.createIcons();
             }, [name]);
             return <i data-lucide={name} width={size} height={size} className={className} onClick={onClick}></i>;
         };
@@ -97,241 +85,303 @@
 
         const Timer = () => {
             const [isActive, setIsActive] = useState(false);
-            const [mode, setMode] = useState(25 * 60); // Default timer value
-            const [initialMode, setInitialMode] = useState(25 * 60); // Store initial to reset properly
-            
-            // Som de notificação (ding simples)
+            const [mode, setMode] = useState(25 * 60);
+            const [initialMode, setInitialMode] = useState(25 * 60);
             const audioRef = useRef(new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3'));
 
             const playSound = () => {
                 audioRef.current.currentTime = 0;
-                audioRef.current.play().catch(e => console.log("Audio play failed (user interaction needed first)", e));
+                audioRef.current.play().catch(e => console.log("Audio play failed", e));
             };
 
             useEffect(() => {
                 let interval = null;
-                
                 if (isActive && mode > 0) {
-                    interval = setInterval(() => {
-                        setMode((prev) => prev - 1);
-                    }, 1000);
+                    interval = setInterval(() => setMode((prev) => prev - 1), 1000);
                 } else if (mode === 0 && isActive) {
-                    // Timer finished naturally
                     setIsActive(false);
                     playSound();
-                    // Opcional: alertar ou notificar visualmente
                 }
-                
                 return () => clearInterval(interval);
             }, [isActive, mode]);
-
-            const handleStartPause = () => {
-                setIsActive(!isActive);
-            };
-
-            const handleReset = () => {
-                setIsActive(false);
-                setMode(initialMode);
-            };
-
-            const handleFinishNow = () => {
-                setIsActive(false);
-                setMode(0);
-                playSound();
-            };
-
-            const setTimerMode = (minutes) => {
-                setIsActive(false);
-                setMode(minutes * 60);
-                setInitialMode(minutes * 60);
-            };
-
-            const formatTime = (totalSeconds) => {
-                const mins = Math.floor(totalSeconds / 60);
-                const secs = totalSeconds % 60;
-                return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-            };
 
             return (
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-6 flex flex-col items-center justify-center">
                     <h3 className="text-gray-500 font-medium mb-2">Cronômetro de Estudos</h3>
                     <div className={`text-5xl font-mono font-bold mb-4 tracking-wider transition-colors ${mode === 0 ? 'text-green-600' : 'text-gray-800'}`}>
-                        {formatTime(mode)}
+                        {Math.floor(mode / 60).toString().padStart(2, '0')}:{ (mode % 60).toString().padStart(2, '0') }
                     </div>
-                    
                     <div className="flex flex-wrap justify-center gap-2 mb-4">
-                         <button 
-                            onClick={handleStartPause}
-                            className={`px-6 py-2 rounded-lg font-medium text-white transition-colors ${isActive ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-600 hover:bg-blue-700'}`}
-                        >
+                         <button onClick={() => setIsActive(!isActive)} className={`px-6 py-2 rounded-lg font-medium text-white transition-colors ${isActive ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-600 hover:bg-blue-700'}`}>
                             {isActive ? 'Pausar' : 'Iniciar'}
                         </button>
-                        
                         {isActive && (
-                            <button 
-                                onClick={handleFinishNow}
-                                className="px-4 py-2 rounded-lg font-medium text-white bg-green-600 hover:bg-green-700 transition-colors flex items-center gap-2"
-                                title="Finalizar ciclo e tocar som"
-                            >
-                                <Icon name="check-square" size={16} />
-                                Finalizar
+                            <button onClick={() => { setIsActive(false); setMode(0); playSound(); }} className="px-4 py-2 rounded-lg font-medium text-white bg-green-600 hover:bg-green-700 transition-colors flex items-center gap-2">
+                                <Icon name="check-square" size={16} /> Finalizar
                             </button>
                         )}
-
-                        <button 
-                            onClick={handleReset}
-                            className="px-4 py-2 rounded-lg font-medium text-gray-600 bg-gray-100 hover:bg-gray-200"
-                        >
-                            Resetar
-                        </button>
+                        <button onClick={() => { setIsActive(false); setMode(initialMode); }} className="px-4 py-2 rounded-lg font-medium text-gray-600 bg-gray-100 hover:bg-gray-200">Resetar</button>
                     </div>
-
                     <div className="flex space-x-2 text-xs">
-                        <button onClick={() => setTimerMode(25)} className={`px-3 py-1 rounded border ${initialMode === 25*60 ? 'bg-blue-50 text-blue-600 border-blue-200' : 'bg-white text-gray-600 border-gray-200'}`}>Pomodoro (25m)</button>
-                        <button onClick={() => setTimerMode(50)} className={`px-3 py-1 rounded border ${initialMode === 50*60 ? 'bg-blue-50 text-blue-600 border-blue-200' : 'bg-white text-gray-600 border-gray-200'}`}>Longo (50m)</button>
+                        <button onClick={() => { setIsActive(false); setMode(25*60); setInitialMode(25*60); }} className={`px-3 py-1 rounded border ${initialMode === 25*60 ? 'bg-blue-50 text-blue-600 border-blue-200' : 'bg-white text-gray-600 border-gray-200'}`}>Pomodoro (25m)</button>
+                        <button onClick={() => { setIsActive(false); setMode(50*60); setInitialMode(50*60); }} className={`px-3 py-1 rounded border ${initialMode === 50*60 ? 'bg-blue-50 text-blue-600 border-blue-200' : 'bg-white text-gray-600 border-gray-200'}`}>Longo (50m)</button>
                     </div>
                 </div>
             );
         };
 
-        const App = () => {
+        // --- COMPONENTE: LOGIN / CADASTRO ---
+        const AuthScreen = ({ onLogin }) => {
+            const [isRegister, setIsRegister] = useState(false);
+            const [formData, setFormData] = useState({ username: '', password: '' });
+            const [error, setError] = useState('');
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                setError('');
+                if(!formData.username || !formData.password) return setError('Preencha todos os campos');
+
+                const users = JSON.parse(localStorage.getItem('studyApp_users') || '[]');
+                
+                if (isRegister) {
+                    if (users.find(u => u.username === formData.username)) {
+                        return setError('Usuário já existe');
+                    }
+                    const newUser = { username: formData.username, password: formData.password }; // Em produção, use hash/salt
+                    localStorage.setItem('studyApp_users', JSON.stringify([...users, newUser]));
+                    onLogin(newUser);
+                } else {
+                    const user = users.find(u => u.username === formData.username && u.password === formData.password);
+                    if (user) onLogin(user);
+                    else setError('Credenciais inválidas');
+                }
+            };
+
+            return (
+                <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+                    <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md animate-fade-in">
+                        <div className="text-center mb-8">
+                            <div className="inline-flex p-4 rounded-full bg-blue-100 text-blue-600 mb-4">
+                                <Icon name="book-open" size={32} />
+                            </div>
+                            <h1 className="text-2xl font-bold text-gray-800">Plataforma de Estudos</h1>
+                            <p className="text-gray-500 text-sm">Organize seus editais e ciclos em um só lugar.</p>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            {error && <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">{error}</div>}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Usuário</label>
+                                <input type="text" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500" placeholder="Seu nome de usuário" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+                                <input type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500" placeholder="••••••••" />
+                            </div>
+                            <button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition shadow-md">
+                                {isRegister ? 'Criar Conta' : 'Entrar'}
+                            </button>
+                        </form>
+                        
+                        <div className="mt-6 text-center text-sm text-gray-500">
+                            {isRegister ? 'Já tem conta? ' : 'Não tem conta? '}
+                            <button onClick={() => { setIsRegister(!isRegister); setError(''); }} className="text-blue-600 font-bold hover:underline">
+                                {isRegister ? 'Fazer Login' : 'Cadastre-se'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- COMPONENTE: SELEÇÃO DE PLANOS ---
+        const PlanList = ({ user, onSelectPlan, onLogout }) => {
+            const [plans, setPlans] = useState([]);
+            const [showNewModal, setShowNewModal] = useState(false);
+            const [newPlanName, setNewPlanName] = useState('');
+            const [useTemplate, setUseTemplate] = useState(true);
+
+            useEffect(() => {
+                const userPlans = JSON.parse(localStorage.getItem(`app_plans_${user.username}`) || '[]');
+                setPlans(userPlans);
+            }, [user]);
+
+            const createPlan = (e) => {
+                e.preventDefault();
+                if (!newPlanName) return;
+
+                const newPlan = {
+                    id: Date.now().toString(),
+                    title: newPlanName,
+                    items: useTemplate ? caixaTemplate : [], // Usa o template CAIXA ou começa vazio
+                    settings: { targetDate: '' },
+                    createdAt: new Date().toISOString()
+                };
+
+                const updatedPlans = [...plans, newPlan];
+                setPlans(updatedPlans);
+                localStorage.setItem(`app_plans_${user.username}`, JSON.stringify(updatedPlans));
+                setShowNewModal(false);
+                setNewPlanName('');
+            };
+
+            const deletePlan = (id, e) => {
+                e.stopPropagation();
+                if (window.confirm('Tem certeza que deseja excluir este planejamento?')) {
+                    const updated = plans.filter(p => p.id !== id);
+                    setPlans(updated);
+                    localStorage.setItem(`app_plans_${user.username}`, JSON.stringify(updated));
+                }
+            };
+
+            return (
+                <div className="min-h-screen bg-gray-50">
+                    <header className="bg-slate-900 text-white p-4 shadow-md">
+                        <div className="max-w-6xl mx-auto flex justify-between items-center">
+                            <h1 className="text-xl font-bold flex items-center gap-2">
+                                <Icon name="library" className="text-blue-400" />
+                                Meus Planejamentos
+                            </h1>
+                            <div className="flex items-center gap-4">
+                                <span className="text-sm text-slate-400">Olá, {user.username}</span>
+                                <button onClick={onLogout} className="text-sm bg-slate-800 px-3 py-1 rounded hover:bg-slate-700 transition">Sair</button>
+                            </div>
+                        </div>
+                    </header>
+
+                    <main className="max-w-6xl mx-auto p-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {/* Card de Adicionar Novo */}
+                            <button onClick={() => setShowNewModal(true)} className="flex flex-col items-center justify-center p-8 bg-white border-2 border-dashed border-gray-300 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition cursor-pointer h-48 group">
+                                <div className="p-4 bg-gray-100 rounded-full text-gray-400 group-hover:bg-blue-200 group-hover:text-blue-600 transition mb-3">
+                                    <Icon name="plus" size={32} />
+                                </div>
+                                <span className="font-bold text-gray-500 group-hover:text-blue-600">Criar Novo Plano</span>
+                            </button>
+
+                            {/* Lista de Planos */}
+                            {plans.map(plan => (
+                                <div key={plan.id} onClick={() => onSelectPlan(plan)} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-lg transition cursor-pointer relative group flex flex-col justify-between h-48 animate-fade-in">
+                                    <div>
+                                        <div className="flex justify-between items-start mb-2">
+                                            <div className="p-2 rounded bg-indigo-50 text-indigo-600 w-fit mb-3">
+                                                <Icon name="graduation-cap" size={24} />
+                                            </div>
+                                            <button onClick={(e) => deletePlan(plan.id, e)} className="text-gray-300 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition">
+                                                <Icon name="trash-2" size={16} />
+                                            </button>
+                                        </div>
+                                        <h3 className="text-lg font-bold text-gray-800 line-clamp-2">{plan.title}</h3>
+                                        <p className="text-sm text-gray-500 mt-1">{plan.items.length} tópicos cadastrados</p>
+                                    </div>
+                                    <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center text-xs text-gray-400">
+                                        <span>Criado em {new Date(plan.createdAt).toLocaleDateString()}</span>
+                                        <span className="text-blue-600 font-medium flex items-center gap-1">Acessar <Icon name="arrow-right" size={12} /></span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </main>
+
+                    {showNewModal && (
+                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                            <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 animate-fade-in">
+                                <h2 className="text-xl font-bold mb-4">Novo Planejamento</h2>
+                                <form onSubmit={createPlan}>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Nome do Concurso/Estudo</label>
+                                    <input autoFocus type="text" value={newPlanName} onChange={e => setNewPlanName(e.target.value)} className="w-full p-3 border rounded-lg mb-4 outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: Receita Federal 2026" />
+                                    
+                                    <div className="mb-6 flex items-center gap-2">
+                                        <input type="checkbox" id="template" checked={useTemplate} onChange={e => setUseTemplate(e.target.checked)} className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4" />
+                                        <label htmlFor="template" className="text-sm text-gray-600">Usar template padrão (Eng. Mecânica - CAIXA)</label>
+                                    </div>
+
+                                    <div className="flex justify-end gap-2">
+                                        <button type="button" onClick={() => setShowNewModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Cancelar</button>
+                                        <button type="submit" disabled={!newPlanName} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">Criar Plano</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // --- COMPONENTE: WORKSPACE DE ESTUDO (Lógica antiga do App) ---
+        const StudyWorkspace = ({ user, plan, onBack }) => {
             const [activeTab, setActiveTab] = useState('dashboard');
             
-            // Data de Estudos
-            const [items, setItems] = useState(() => {
-                const saved = localStorage.getItem('caixaStudyData');
-                return saved ? JSON.parse(saved) : initialData;
-            });
-            
-            // Configurações (Data da prova, etc)
-            const [settings, setSettings] = useState(() => {
-                const saved = localStorage.getItem('caixaSettings');
-                return saved ? JSON.parse(saved) : { targetDate: '' };
-            });
+            // Dados locais do Workspace (carregados do plano selecionado)
+            const [items, setItems] = useState(plan.items || []);
+            const [settings, setSettings] = useState(plan.settings || { targetDate: '' });
 
             // UI States
             const [showAddForm, setShowAddForm] = useState(false);
             const [isEditingDate, setIsEditingDate] = useState(false);
-            const [newItem, setNewItem] = useState({
-                category: 'Conhecimentos Básicos',
-                subject: '',
-                topic: '',
-                weight: 1
-            });
+            const [newItem, setNewItem] = useState({ category: 'Geral', subject: '', topic: '', weight: 1 });
             const [editingId, setEditingId] = useState(null);
             const [editFormData, setEditFormData] = useState({ subject: '', topic: '' });
 
-            // Persistência
+            // Salvar automaticamente no localStorage do usuário específico sempre que mudar
             useEffect(() => {
-                localStorage.setItem('caixaStudyData', JSON.stringify(items));
-            }, [items]);
-
-            useEffect(() => {
-                localStorage.setItem('caixaSettings', JSON.stringify(settings));
-            }, [settings]);
-
-            // --- DATE LOGIC ---
-            const handleDateChange = (e) => {
-                setSettings({ ...settings, targetDate: e.target.value });
-            };
-
-            const calculateDaysLeft = () => {
-                if (!settings.targetDate) return null;
-                const target = new Date(settings.targetDate);
-                // Set target time to end of day to avoid partial day weirdness
-                target.setHours(23, 59, 59, 999); 
-                
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-
-                const diffTime = target - today;
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                return diffDays; 
-            };
-            
-            const daysLeft = calculateDaysLeft();
-
-            // --- ITEM ACTIONS ---
-            const toggleTheory = (id) => {
-                setItems(prev => prev.map(item => item.id === id ? { ...item, theory: !item.theory } : item));
-            };
-
-            const updateCount = (id, field, delta) => {
-                setItems(prev => prev.map(item => {
-                    if (item.id === id) {
-                        const newVal = Math.max(0, item[field] + delta);
-                        return { ...item, [field]: newVal };
+                const allPlans = JSON.parse(localStorage.getItem(`app_plans_${user.username}`) || '[]');
+                const updatedPlans = allPlans.map(p => {
+                    if (p.id === plan.id) {
+                        return { ...p, items, settings };
                     }
-                    return item;
-                }));
-            };
+                    return p;
+                });
+                localStorage.setItem(`app_plans_${user.username}`, JSON.stringify(updatedPlans));
+            }, [items, settings, user.username, plan.id]);
 
-            const updateWeight = (id, newWeight) => {
-                setItems(prev => prev.map(item => item.id === id ? { ...item, weight: parseFloat(newWeight) } : item));
-            };
+            // --- LÓGICA DE DATAS ---
+            const daysLeft = useMemo(() => {
+                if (!settings.targetDate) return null;
+                const diff = new Date(settings.targetDate).setHours(23,59,59) - new Date().setHours(0,0,0);
+                return Math.ceil(diff / (1000 * 60 * 60 * 24));
+            }, [settings.targetDate]);
 
+            // --- AÇÕES CRUD ---
+            const toggleTheory = (id) => setItems(prev => prev.map(i => i.id === id ? { ...i, theory: !i.theory } : i));
+            
+            const updateCount = (id, field, delta) => setItems(prev => prev.map(i => i.id === id ? { ...i, [field]: Math.max(0, i[field] + delta) } : i));
+            
+            const updateWeight = (id, val) => setItems(prev => prev.map(i => i.id === id ? { ...i, weight: parseFloat(val) } : i));
+            
             const addItem = (e) => {
                 e.preventDefault();
                 if (!newItem.subject || !newItem.topic) return;
-
-                const newId = 'custom_' + Date.now();
-                setItems(prev => [...prev, {
-                    id: newId,
-                    category: newItem.category,
-                    subject: newItem.subject,
-                    topic: newItem.topic,
-                    weight: parseFloat(newItem.weight),
-                    theory: false,
-                    revisions: 0,
-                    questions: 0
-                }]);
-                
-                setNewItem({ category: 'Conhecimentos Básicos', subject: '', topic: '', weight: 1 });
+                setItems(prev => [...prev, { ...newItem, id: 'c_' + Date.now(), theory: false, revisions: 0, questions: 0, weight: parseFloat(newItem.weight) }]);
+                setNewItem({ category: 'Geral', subject: '', topic: '', weight: 1 });
                 setShowAddForm(false);
             };
 
-            const deleteItem = (id) => {
-                if (window.confirm('Tem certeza que deseja remover este tópico?')) {
-                    setItems(prev => prev.filter(item => item.id !== id));
-                }
-            };
+            const deleteItem = (id) => { if (window.confirm('Excluir este tópico?')) setItems(prev => prev.filter(i => i.id !== id)); };
 
-            const handleEditClick = (item) => {
-                setEditingId(item.id);
-                setEditFormData({ subject: item.subject, topic: item.topic });
-            };
-
-            const handleCancelClick = () => {
-                setEditingId(null);
-                setEditFormData({ subject: '', topic: '' });
-            };
-
-            const handleSaveClick = (id) => {
-                setItems(prev => prev.map(item => {
-                    if (item.id === id) {
-                        return { ...item, subject: editFormData.subject, topic: editFormData.topic };
-                    }
-                    return item;
-                }));
+            const handleEdit = (id) => {
+                const updated = items.map(i => i.id === id ? { ...i, ...editFormData } : i);
+                setItems(updated);
                 setEditingId(null);
             };
 
-            // --- STATS ---
+            // --- ESTATÍSTICAS ---
             const stats = useMemo(() => {
-                const totalItems = items.length;
                 const theoryDone = items.filter(i => i.theory).length;
-                const totalQuestions = items.reduce((acc, curr) => acc + curr.questions, 0);
-                const totalRevisions = items.reduce((acc, curr) => acc + curr.revisions, 0);
-                const progress = totalItems === 0 ? 0 : Math.round((theoryDone / totalItems) * 100);
-                return { totalItems, theoryDone, totalQuestions, totalRevisions, progress };
+                return {
+                    total: items.length,
+                    theoryDone,
+                    questions: items.reduce((a, b) => a + b.questions, 0),
+                    revisions: items.reduce((a, b) => a + b.revisions, 0),
+                    progress: items.length ? Math.round((theoryDone / items.length) * 100) : 0
+                };
             }, [items]);
 
             const studyCycle = useMemo(() => {
-                const scoredItems = items.map(item => ({
-                    ...item,
-                    priorityScore: (item.weight * 10) - ((item.theory ? 5 : 0) + (item.revisions * 2))
-                }));
-                return scoredItems.sort((a, b) => b.priorityScore - a.priorityScore).slice(0, 5);
+                return [...items]
+                    .map(i => ({ ...i, score: (i.weight * 10) - ((i.theory ? 5 : 0) + (i.revisions * 2)) }))
+                    .sort((a, b) => b.score - a.score)
+                    .slice(0, 5);
             }, [items]);
 
             const groupedItems = useMemo(() => {
@@ -342,20 +392,20 @@
                 }, {});
             }, [items]);
 
-            const existingCategories = useMemo(() => {
-                return Array.from(new Set(items.map(i => i.category))).concat('Nova Categoria...');
-            }, [items]);
+            const categories = useMemo(() => Array.from(new Set(items.map(i => i.category))).concat('Nova Categoria...'), [items]);
 
             return (
-                <div className="flex min-h-screen">
+                <div className="flex h-screen overflow-hidden">
                     {/* Sidebar */}
                     <aside className="w-64 bg-slate-900 text-white flex-shrink-0 hidden md:flex flex-col">
                         <div className="p-6 border-b border-slate-800">
-                            <h1 className="text-xl font-bold flex items-center gap-2">
-                                <Icon name="book-open" className="text-blue-400" />
-                                CAIXA 2025
+                            <button onClick={onBack} className="text-xs text-slate-400 hover:text-white flex items-center gap-1 mb-3 transition">
+                                <Icon name="arrow-left" size={14} /> Voltar aos Planos
+                            </button>
+                            <h1 className="text-lg font-bold leading-tight flex items-start gap-2 break-words">
+                                <Icon name="book-open" className="text-blue-400 mt-1 flex-shrink-0" />
+                                {plan.title}
                             </h1>
-                            <p className="text-xs text-slate-400 mt-1">Engenharia Mecânica</p>
                         </div>
                         <nav className="flex-1 p-4 space-y-2">
                             <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'dashboard' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
@@ -368,67 +418,38 @@
                                 <Icon name="refresh-cw" size={18} /> Ciclo de Estudos
                             </button>
                         </nav>
-                        <div className="p-4 border-t border-slate-800 text-xs text-slate-500 text-center">
-                            Todos os direitos reservados.
-                        </div>
                     </aside>
 
                     {/* Mobile Header */}
-                    <div className="md:hidden fixed top-0 w-full bg-slate-900 text-white z-50 p-4 flex justify-between items-center">
-                        <span className="font-bold">CAIXA 2025</span>
+                    <div className="md:hidden fixed top-0 w-full bg-slate-900 text-white z-50 p-4 flex justify-between items-center shadow-lg">
+                        <button onClick={onBack}><Icon name="arrow-left" /></button>
+                        <span className="font-bold truncate max-w-[150px]">{plan.title}</span>
                         <div className="flex gap-4">
                             <button onClick={() => setActiveTab('dashboard')}><Icon name="layout-dashboard" /></button>
                             <button onClick={() => setActiveTab('tracker')}><Icon name="list-checks" /></button>
-                            <button onClick={() => setActiveTab('cycle')}><Icon name="refresh-cw" /></button>
                         </div>
                     </div>
 
-                    {/* Main Content */}
-                    <main className="flex-1 p-6 md:p-8 mt-14 md:mt-0 overflow-y-auto h-screen custom-scrollbar">
-                        
-                        {/* --- DASHBOARD --- */}
+                    {/* Conteúdo Principal */}
+                    <main className="flex-1 p-6 md:p-8 mt-14 md:mt-0 overflow-y-auto h-screen bg-gray-50 custom-scrollbar">
                         {activeTab === 'dashboard' && (
                             <div className="max-w-5xl mx-auto animate-fade-in">
-                                <h2 className="text-2xl font-bold text-gray-800 mb-6">Visão Geral</h2>
-                                
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                                    <StatCard title="Progresso Teórico" value={`${stats.progress}%`} subtitle={`${stats.theoryDone}/${stats.totalItems} tópicos`} icon="book" color="bg-blue-600" />
-                                    <StatCard title="Questões Feitas" value={stats.totalQuestions} subtitle="Acumulado total" icon="check-circle" color="bg-green-600" />
-                                    <StatCard title="Revisões" value={stats.totalRevisions} subtitle="Ciclos completados" icon="rotate-cw" color="bg-purple-600" />
+                                    <StatCard title="Progresso" value={`${stats.progress}%`} subtitle={`${stats.theoryDone}/${stats.total} tópicos`} icon="book" color="bg-blue-600" />
+                                    <StatCard title="Questões" value={stats.questions} subtitle="Total resolvidas" icon="check-circle" color="bg-green-600" />
+                                    <StatCard title="Revisões" value={stats.revisions} subtitle="Total realizadas" icon="rotate-cw" color="bg-purple-600" />
                                     
-                                    {/* Card Dias Restantes (Interativo) */}
                                     <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4 cursor-pointer hover:shadow-md transition-shadow relative group">
-                                        <div className="p-3 rounded-lg bg-orange-500 bg-opacity-10 text-orange-500">
-                                            <Icon name="calendar" className="text-orange-500" />
-                                        </div>
+                                        <div className="p-3 rounded-lg bg-orange-100 text-orange-600"><Icon name="calendar" /></div>
                                         <div className="flex-1">
                                             <h3 className="text-gray-500 text-sm font-medium flex justify-between">
                                                 Dias Restantes
-                                                <button onClick={() => setIsEditingDate(!isEditingDate)} className="opacity-0 group-hover:opacity-100 transition-opacity text-blue-500 hover:text-blue-700">
-                                                    <Icon name="pencil" size={14} />
-                                                </button>
+                                                <button onClick={() => setIsEditingDate(!isEditingDate)} className="opacity-0 group-hover:opacity-100 transition text-blue-500"><Icon name="pencil" size={14} /></button>
                                             </h3>
-                                            
-                                            {isEditingDate || daysLeft === null ? (
-                                                <div className="mt-1">
-                                                    <input 
-                                                        type="date" 
-                                                        value={settings.targetDate} 
-                                                        onChange={handleDateChange}
-                                                        className="text-sm border rounded p-1 w-full outline-none focus:ring-2 focus:ring-orange-200"
-                                                        onBlur={() => setIsEditingDate(false)}
-                                                        autoFocus
-                                                    />
-                                                </div>
+                                            {isEditingDate ? (
+                                                <input type="date" value={settings.targetDate} onChange={e => setSettings({...settings, targetDate: e.target.value})} className="border rounded p-1 w-full text-sm mt-1" onBlur={() => setIsEditingDate(false)} autoFocus />
                                             ) : (
-                                                <>
-                                                    <p className="text-2xl font-bold text-gray-800">
-                                                        {daysLeft >= 0 ? daysLeft : "Dia!"}
-                                                    </p>
-                                                    <p className="text-xs text-gray-400">
-                                                        {daysLeft >= 0 ? `Até ${new Date(settings.targetDate).toLocaleDateString('pt-BR')}` : "Data passada ou hoje"}
-                                                    </p>
-                                                </>
+                                                <p className="text-xl font-bold text-gray-800">{daysLeft !== null ? (daysLeft >= 0 ? daysLeft : 'Dia!') : '--'}</p>
                                             )}
                                         </div>
                                     </div>
@@ -436,254 +457,110 @@
 
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                                     <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                                        <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Icon name="bar-chart-2" size={18} /> Distribuição por Disciplina</h3>
-                                        <div className="space-y-4">
-                                            {Object.entries(groupedItems).map(([category, catItems]) => {
-                                                const catTheory = catItems.filter(i => i.theory).length;
-                                                const catProgress = Math.round((catTheory / catItems.length) * 100);
+                                        <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Icon name="bar-chart-2" size={18} /> Por Disciplina</h3>
+                                        <div className="space-y-4 max-h-80 overflow-y-auto custom-scrollbar pr-2">
+                                            {Object.entries(groupedItems).map(([cat, list]) => {
+                                                const prog = Math.round((list.filter(i => i.theory).length / list.length) * 100);
                                                 return (
-                                                    <div key={category}>
+                                                    <div key={cat}>
                                                         <div className="flex justify-between text-sm mb-1">
-                                                            <span className="text-gray-600 font-medium">{category}</span>
-                                                            <span className="text-gray-900 font-bold">{catProgress}%</span>
+                                                            <span className="text-gray-600">{cat}</span>
+                                                            <span className="font-bold">{prog}%</span>
                                                         </div>
-                                                        <ProgressBar value={catProgress} color={category.includes('Básicos') ? 'bg-indigo-500' : 'bg-teal-500'} />
+                                                        <ProgressBar value={prog} color="bg-blue-500" />
                                                     </div>
-                                                )
+                                                );
                                             })}
                                         </div>
                                     </div>
-
                                     <div>
                                         <Timer />
                                         <div className="bg-gradient-to-br from-blue-600 to-blue-800 text-white p-6 rounded-xl shadow-lg">
-                                            <h3 className="font-bold text-lg mb-2">Próximo Passo</h3>
-                                            <p className="text-blue-100 text-sm mb-4">Com base no seu ciclo, sugerimos focar em:</p>
+                                            <h3 className="font-bold text-lg mb-2">Próximo Foco</h3>
                                             {studyCycle.length > 0 ? (
                                                 <div className="bg-white/10 p-4 rounded-lg backdrop-blur-sm border border-white/20">
-                                                    <span className="text-xs uppercase tracking-wider text-blue-200 font-bold">{studyCycle[0]?.category}</span>
-                                                    <h4 className="font-bold text-lg leading-tight mt-1">{studyCycle[0]?.subject}</h4>
-                                                    <p className="text-sm mt-2 opacity-90">{studyCycle[0]?.topic}</p>
+                                                    <span className="text-xs uppercase tracking-wider text-blue-200 font-bold">{studyCycle[0].category}</span>
+                                                    <h4 className="font-bold text-lg leading-tight mt-1">{studyCycle[0].subject}</h4>
+                                                    <p className="text-sm mt-2 opacity-90">{studyCycle[0].topic}</p>
                                                 </div>
-                                            ) : (
-                                                <div className="bg-white/10 p-4 rounded-lg backdrop-blur-sm border border-white/20">
-                                                    <p>Parabéns! Você completou tudo.</p>
-                                                </div>
-                                            )}
-                                            <button onClick={() => setActiveTab('cycle')} className="w-full mt-4 py-2 bg-white text-blue-800 font-bold rounded-lg text-sm hover:bg-blue-50 transition-colors">
-                                                Ver Ciclo Completo
-                                            </button>
+                                            ) : <p className="text-sm opacity-80">Nada pendente!</p>}
+                                            <button onClick={() => setActiveTab('cycle')} className="w-full mt-4 py-2 bg-white text-blue-800 font-bold rounded-lg text-sm hover:bg-blue-50 transition">Ver Ciclo</button>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         )}
 
-                        {/* --- TRACKER --- */}
                         {activeTab === 'tracker' && (
-                            <div className="max-w-6xl mx-auto">
+                             <div className="max-w-6xl mx-auto animate-fade-in">
                                 <div className="flex justify-between items-center mb-6">
                                     <h2 className="text-2xl font-bold text-gray-800">Edital Verticalizado</h2>
-                                    <div className="flex gap-3 items-center">
-                                        <div className="text-sm text-gray-500 bg-white px-4 py-2 rounded-lg shadow-sm">
-                                            Total: {items.length} Tópicos
-                                        </div>
-                                        <button 
-                                            onClick={() => setShowAddForm(!showAddForm)}
-                                            className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-sm text-sm font-medium hover:bg-blue-700 transition flex items-center gap-2"
-                                        >
-                                            <Icon name={showAddForm ? "x" : "plus"} size={16} />
-                                            {showAddForm ? "Cancelar" : "Adicionar Tópico"}
-                                        </button>
-                                    </div>
+                                    <button onClick={() => setShowAddForm(!showAddForm)} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-2">
+                                        <Icon name={showAddForm ? "x" : "plus"} size={16} /> {showAddForm ? "Cancelar" : "Adicionar Tópico"}
+                                    </button>
                                 </div>
 
                                 {showAddForm && (
-                                    <div className="bg-white p-6 rounded-xl shadow-md border border-blue-100 mb-8 animate-fade-in">
-                                        <h3 className="font-bold text-gray-800 mb-4">Adicionar Novo Conteúdo</h3>
-                                        <form onSubmit={addItem} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                                            <div className="lg:col-span-1">
-                                                <label className="block text-xs font-medium text-gray-500 mb-1">Categoria</label>
-                                                <select 
-                                                    value={newItem.category} 
-                                                    onChange={e => setNewItem({...newItem, category: e.target.value})}
-                                                    className="w-full p-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                                >
-                                                    {existingCategories.map(cat => (
-                                                        <option key={cat} value={cat}>{cat}</option>
-                                                    ))}
-                                                </select>
-                                                {newItem.category === 'Nova Categoria...' && (
-                                                     <input 
-                                                        type="text" 
-                                                        placeholder="Digite o nome da categoria"
-                                                        className="w-full mt-2 p-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                                        onBlur={(e) => {
-                                                            if(e.target.value) setNewItem({...newItem, category: e.target.value})
-                                                        }}
-                                                    />
-                                                )}
-                                            </div>
-                                            <div className="lg:col-span-1">
-                                                <label className="block text-xs font-medium text-gray-500 mb-1">Disciplina</label>
-                                                <input 
-                                                    type="text" 
-                                                    required
-                                                    value={newItem.subject} 
-                                                    onChange={e => setNewItem({...newItem, subject: e.target.value})}
-                                                    placeholder="Ex: Física, Redação..."
-                                                    className="w-full p-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                                />
-                                            </div>
-                                            <div className="lg:col-span-2">
-                                                <label className="block text-xs font-medium text-gray-500 mb-1">Tópico/Assunto</label>
-                                                <input 
-                                                    type="text" 
-                                                    required
-                                                    value={newItem.topic} 
-                                                    onChange={e => setNewItem({...newItem, topic: e.target.value})}
-                                                    placeholder="Ex: Leis de Newton..."
-                                                    className="w-full p-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                                />
-                                            </div>
-                                            <div className="lg:col-span-1">
-                                                <label className="block text-xs font-medium text-gray-500 mb-1">Peso</label>
-                                                <input 
-                                                    type="number" 
-                                                    step="0.1" 
-                                                    min="0.1"
-                                                    value={newItem.weight} 
-                                                    onChange={e => setNewItem({...newItem, weight: e.target.value})}
-                                                    className="w-full p-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                                />
-                                            </div>
-                                            <div className="lg:col-span-5 flex justify-end">
-                                                <button type="submit" className="bg-green-600 text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition">
-                                                    Salvar Novo Tópico
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </div>
+                                    <form onSubmit={addItem} className="bg-white p-6 rounded-xl shadow-md border border-blue-100 mb-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                                        <div className="lg:col-span-1">
+                                            <label className="text-xs font-medium text-gray-500">Categoria</label>
+                                            <select value={newItem.category} onChange={e => setNewItem({...newItem, category: e.target.value})} className="w-full p-2 border rounded text-sm mt-1">
+                                                {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                                            </select>
+                                            {newItem.category === 'Nova Categoria...' && <input type="text" placeholder="Nome da categoria" onBlur={e => e.target.value && setNewItem({...newItem, category: e.target.value})} className="w-full mt-2 p-2 border rounded text-sm" />}
+                                        </div>
+                                        <div className="lg:col-span-1"><label className="text-xs font-medium text-gray-500">Disciplina</label><input required value={newItem.subject} onChange={e => setNewItem({...newItem, subject: e.target.value})} className="w-full p-2 border rounded text-sm mt-1" /></div>
+                                        <div className="lg:col-span-2"><label className="text-xs font-medium text-gray-500">Tópico</label><input required value={newItem.topic} onChange={e => setNewItem({...newItem, topic: e.target.value})} className="w-full p-2 border rounded text-sm mt-1" /></div>
+                                        <div className="lg:col-span-1"><label className="text-xs font-medium text-gray-500">Peso</label><input type="number" step="0.1" value={newItem.weight} onChange={e => setNewItem({...newItem, weight: e.target.value})} className="w-full p-2 border rounded text-sm mt-1" /></div>
+                                        <button type="submit" className="lg:col-span-5 bg-green-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-green-700">Salvar</button>
+                                    </form>
                                 )}
 
                                 <div className="space-y-8">
-                                    {Object.entries(groupedItems).map(([category, catItems]) => (
-                                        <div key={category} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                                            <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-                                                <h3 className="font-bold text-gray-800">{category}</h3>
-                                                <span className="text-xs font-semibold px-2 py-1 bg-gray-200 text-gray-600 rounded">
-                                                    Peso Médio: {(catItems.reduce((a, b) => a + b.weight, 0) / catItems.length).toFixed(1)}
-                                                </span>
-                                            </div>
+                                    {Object.entries(groupedItems).map(([cat, list]) => (
+                                        <div key={cat} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                                            <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 font-bold text-gray-800">{cat}</div>
                                             <div className="overflow-x-auto">
-                                                <table className="w-full text-left border-collapse">
-                                                    <thead>
-                                                        <tr className="text-xs text-gray-500 uppercase bg-gray-50/50">
-                                                            <th className="px-6 py-3 font-medium w-1/4">Disciplina</th>
-                                                            <th className="px-6 py-3 font-medium w-1/3">Tópico</th>
-                                                            <th className="px-6 py-3 font-medium text-center">Peso</th>
-                                                            <th className="px-6 py-3 font-medium text-center">Teoria</th>
-                                                            <th className="px-6 py-3 font-medium text-center">Revisões</th>
-                                                            <th className="px-6 py-3 font-medium text-center">Questões</th>
-                                                            <th className="px-6 py-3 font-medium text-center min-w-[100px]">Ações</th>
+                                                <table className="w-full text-left text-sm">
+                                                    <thead className="bg-gray-50/50 text-gray-500 uppercase text-xs">
+                                                        <tr>
+                                                            <th className="px-6 py-3 w-1/4">Disciplina</th>
+                                                            <th className="px-6 py-3 w-1/3">Tópico</th>
+                                                            <th className="px-6 py-3 text-center">Peso</th>
+                                                            <th className="px-6 py-3 text-center">Teoria</th>
+                                                            <th className="px-6 py-3 text-center">Rev/Quest</th>
+                                                            <th className="px-6 py-3 text-center">Ações</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-gray-100">
-                                                        {catItems.map(item => (
-                                                            <tr key={item.id} className="hover:bg-blue-50/30 transition-colors group">
+                                                        {list.map(item => (
+                                                            <tr key={item.id} className="hover:bg-blue-50/30 group">
                                                                 {editingId === item.id ? (
                                                                     <>
-                                                                        <td className="px-6 py-4">
-                                                                            <input 
-                                                                                type="text" 
-                                                                                value={editFormData.subject}
-                                                                                onChange={(e) => setEditFormData({...editFormData, subject: e.target.value})}
-                                                                                className="w-full p-2 border border-blue-300 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                                                                autoFocus
-                                                                            />
-                                                                        </td>
-                                                                        <td className="px-6 py-4">
-                                                                            <input 
-                                                                                type="text" 
-                                                                                value={editFormData.topic}
-                                                                                onChange={(e) => setEditFormData({...editFormData, topic: e.target.value})}
-                                                                                className="w-full p-2 border border-blue-300 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                                                            />
-                                                                        </td>
+                                                                        <td className="px-6 py-4"><input value={editFormData.subject} onChange={e => setEditFormData({...editFormData, subject: e.target.value})} className="border rounded p-1 w-full" /></td>
+                                                                        <td className="px-6 py-4"><input value={editFormData.topic} onChange={e => setEditFormData({...editFormData, topic: e.target.value})} className="border rounded p-1 w-full" /></td>
                                                                     </>
                                                                 ) : (
                                                                     <>
-                                                                        <td className="px-6 py-4 text-sm font-medium text-gray-900">{item.subject}</td>
-                                                                        <td className="px-6 py-4 text-sm text-gray-600">{item.topic}</td>
+                                                                        <td className="px-6 py-4 font-medium">{item.subject}</td>
+                                                                        <td className="px-6 py-4 text-gray-600">{item.topic}</td>
                                                                     </>
                                                                 )}
-                                                                
+                                                                <td className="px-6 py-4 text-center"><input type="number" step="0.5" value={item.weight} onChange={e => updateWeight(item.id, e.target.value)} className="w-12 text-center border rounded p-1" /></td>
                                                                 <td className="px-6 py-4 text-center">
-                                                                    <input 
-                                                                        type="number" 
-                                                                        step="0.5" 
-                                                                        value={item.weight}
-                                                                        onChange={(e) => updateWeight(item.id, e.target.value)}
-                                                                        className="w-16 text-center text-sm border border-gray-200 rounded p-1 focus:ring-2 focus:ring-blue-500 outline-none"
-                                                                    />
+                                                                    <button onClick={() => toggleTheory(item.id)} className={`w-6 h-6 rounded border flex items-center justify-center mx-auto transition ${item.theory ? 'bg-green-500 border-green-500 text-white' : 'hover:border-green-500 text-transparent'}`}><Icon name="check" size={14} /></button>
                                                                 </td>
                                                                 <td className="px-6 py-4 text-center">
-                                                                    <button 
-                                                                        onClick={() => toggleTheory(item.id)}
-                                                                        className={`w-6 h-6 rounded border flex items-center justify-center mx-auto transition-all ${item.theory ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 text-transparent hover:border-green-500'}`}
-                                                                    >
-                                                                        <Icon name="check" size={14} />
-                                                                    </button>
-                                                                </td>
-                                                                <td className="px-6 py-4">
-                                                                    <div className="flex items-center justify-center space-x-2">
-                                                                        <button onClick={() => updateCount(item.id, 'revisions', -1)} className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center">-</button>
-                                                                        <span className="w-8 text-center text-sm font-mono">{item.revisions}</span>
-                                                                        <button onClick={() => updateCount(item.id, 'revisions', 1)} className="w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-600 flex items-center justify-center">+</button>
-                                                                    </div>
-                                                                </td>
-                                                                <td className="px-6 py-4">
-                                                                    <div className="flex items-center justify-center space-x-2">
-                                                                        <button onClick={() => updateCount(item.id, 'questions', -10)} className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center text-xs">-10</button>
-                                                                        <span className="w-10 text-center text-sm font-mono">{item.questions}</span>
-                                                                        <button onClick={() => updateCount(item.id, 'questions', 10)} className="w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-600 flex items-center justify-center text-xs">+10</button>
+                                                                    <div className="flex flex-col gap-1 items-center text-xs">
+                                                                        <div className="flex items-center gap-1"><span className="w-12 text-right">Rev: {item.revisions}</span> <button onClick={()=>updateCount(item.id,'revisions',1)} className="bg-blue-100 text-blue-600 rounded px-1 hover:bg-blue-200">+</button></div>
+                                                                        <div className="flex items-center gap-1"><span className="w-12 text-right">Qst: {item.questions}</span> <button onClick={()=>updateCount(item.id,'questions',10)} className="bg-green-100 text-green-600 rounded px-1 hover:bg-green-200">+10</button></div>
                                                                     </div>
                                                                 </td>
                                                                 <td className="px-6 py-4 text-center">
                                                                     {editingId === item.id ? (
-                                                                        <div className="flex items-center justify-center gap-2">
-                                                                            <button 
-                                                                                onClick={() => handleSaveClick(item.id)}
-                                                                                className="text-green-600 hover:text-green-800 p-1 bg-green-50 rounded"
-                                                                                title="Salvar"
-                                                                            >
-                                                                                <Icon name="check" size={16} />
-                                                                            </button>
-                                                                            <button 
-                                                                                onClick={handleCancelClick}
-                                                                                className="text-red-500 hover:text-red-700 p-1 bg-red-50 rounded"
-                                                                                title="Cancelar"
-                                                                            >
-                                                                                <Icon name="x" size={16} />
-                                                                            </button>
-                                                                        </div>
+                                                                        <div className="flex gap-2 justify-center"><button onClick={() => handleEdit(item.id)} className="text-green-600"><Icon name="check" size={16}/></button> <button onClick={() => setEditingId(null)} className="text-red-500"><Icon name="x" size={16}/></button></div>
                                                                     ) : (
-                                                                        <div className="flex items-center justify-center gap-2">
-                                                                            <button 
-                                                                                onClick={() => handleEditClick(item)}
-                                                                                className="text-gray-300 hover:text-blue-500 transition-colors p-1"
-                                                                                title="Editar tópico"
-                                                                            >
-                                                                                <Icon name="pencil" size={16} />
-                                                                            </button>
-                                                                            <button 
-                                                                                onClick={() => deleteItem(item.id)}
-                                                                                className="text-gray-300 hover:text-red-500 transition-colors p-1"
-                                                                                title="Excluir tópico"
-                                                                            >
-                                                                                <Icon name="trash-2" size={16} />
-                                                                            </button>
-                                                                        </div>
+                                                                        <div className="flex gap-2 justify-center"><button onClick={() => { setEditingId(item.id); setEditFormData({subject: item.subject, topic: item.topic}) }} className="text-gray-400 hover:text-blue-500"><Icon name="pencil" size={16}/></button> <button onClick={() => deleteItem(item.id)} className="text-gray-400 hover:text-red-500"><Icon name="trash-2" size={16}/></button></div>
                                                                     )}
                                                                 </td>
                                                             </tr>
@@ -694,63 +571,78 @@
                                         </div>
                                     ))}
                                 </div>
-                            </div>
+                             </div>
                         )}
 
-                        {/* --- CYCLE --- */}
                         {activeTab === 'cycle' && (
-                            <div className="max-w-4xl mx-auto">
-                                <h2 className="text-2xl font-bold text-gray-800 mb-2">Ciclo de Estudos Inteligente</h2>
-                                <p className="text-gray-600 mb-8">
-                                    Baseado no peso das matérias e no que você ainda não completou.
-                                </p>
-
+                            <div className="max-w-4xl mx-auto animate-fade-in">
+                                <h2 className="text-2xl font-bold text-gray-800 mb-6">Ciclo de Estudos Inteligente</h2>
                                 <div className="space-y-4">
                                     {studyCycle.map((item, index) => (
-                                        <div key={item.id} className="relative bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-all hover:shadow-md hover:border-blue-200">
-                                            <div className="absolute -left-2 top-6 w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold shadow-lg z-10">
-                                                {index + 1}
-                                            </div>
-                                            
-                                            <div className="pl-6 flex-1">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className={`text-xs px-2 py-0.5 rounded font-bold ${item.category.includes('Básicos') ? 'bg-indigo-100 text-indigo-700' : 'bg-teal-100 text-teal-700'}`}>
-                                                        {item.category}
-                                                    </span>
-                                                    <span className="text-xs text-gray-400 font-mono">Peso: {item.weight}</span>
+                                        <div key={item.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between relative overflow-hidden">
+                                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500"></div>
+                                            <div className="flex items-center gap-4">
+                                                <div className="bg-blue-100 text-blue-700 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm">{index + 1}</div>
+                                                <div>
+                                                    <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">{item.category}</span>
+                                                    <h3 className="font-bold text-gray-800 mt-1">{item.subject}</h3>
+                                                    <p className="text-sm text-gray-500">{item.topic}</p>
                                                 </div>
-                                                <h3 className="text-lg font-bold text-gray-900">{item.subject}</h3>
-                                                <p className="text-gray-600 mt-1">{item.topic}</p>
                                             </div>
-
-                                            <div className="flex flex-col items-end gap-2 pl-6 md:pl-0 w-full md:w-auto">
-                                                <div className="flex items-center gap-4 text-sm text-gray-500">
-                                                    <span className="flex items-center gap-1" title="Questões Feitas"><Icon name="check-circle" size={14} /> {item.questions}</span>
-                                                    <span className="flex items-center gap-1" title="Revisões Feitas"><Icon name="rotate-cw" size={14} /> {item.revisions}</span>
+                                            <div className="flex flex-col items-end gap-2">
+                                                <div className="flex gap-3 text-xs text-gray-400">
+                                                    <span className="flex items-center gap-1"><Icon name="rotate-cw" size={12}/> {item.revisions}</span>
+                                                    <span className="flex items-center gap-1"><Icon name="check-circle" size={12}/> {item.questions}</span>
                                                 </div>
-                                                <button 
-                                                    onClick={() => toggleTheory(item.id)}
-                                                    className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors ${item.theory ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700'}`}
-                                                >
-                                                    {item.theory ? 'Concluído' : 'Marcar Conclusão'}
+                                                <button onClick={() => toggleTheory(item.id)} className={`px-3 py-1 rounded text-xs font-bold border transition ${item.theory ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-blue-50'}`}>
+                                                    {item.theory ? 'Concluído' : 'Marcar'}
                                                 </button>
                                             </div>
                                         </div>
                                     ))}
-                                </div>
-                                
-                                <div className="mt-8 bg-yellow-50 p-4 rounded-lg border border-yellow-200 text-sm text-yellow-800 flex items-start gap-3">
-                                    <Icon name="info" className="flex-shrink-0 mt-0.5" />
-                                    <p>
-                                        <strong>Como funciona:</strong> Este algoritmo prioriza matérias com <strong>maior peso</strong> que ainda não foram marcadas como "Teoria Concluída" e que possuem poucas revisões. À medida que você estuda e atualiza o painel, a ordem mudará automaticamente.
-                                    </p>
+                                    {studyCycle.length === 0 && <div className="text-center text-gray-500 py-10">Nenhum tópico pendente para estudar agora!</div>}
                                 </div>
                             </div>
                         )}
-                        
                     </main>
                 </div>
             );
+        };
+
+        // --- COMPONENTE PRINCIPAL (ORQUESTRADOR) ---
+        const App = () => {
+            const [user, setUser] = useState(null);
+            const [activePlan, setActivePlan] = useState(null);
+
+            // Tentar recuperar sessão (opcional, para simplicidade faremos login sempre ao recarregar por segurança simulada)
+            // Mas se quiser persistir o login, use localStorage aqui.
+            
+            const handleLogin = (loggedUser) => {
+                setUser(loggedUser);
+            };
+
+            const handleLogout = () => {
+                setUser(null);
+                setActivePlan(null);
+            };
+
+            const handleSelectPlan = (plan) => {
+                setActivePlan(plan);
+            };
+
+            const handleBackToPlans = () => {
+                setActivePlan(null);
+            };
+
+            if (!user) {
+                return <AuthScreen onLogin={handleLogin} />;
+            }
+
+            if (!activePlan) {
+                return <PlanList user={user} onSelectPlan={handleSelectPlan} onLogout={handleLogout} />;
+            }
+
+            return <StudyWorkspace user={user} plan={activePlan} onBack={handleBackToPlans} />;
         };
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
