@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aprova+ Concursos</title>
+    <title>Painel Aprova+</title>
     
     <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -33,9 +33,9 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useMemo } = React;
+        const { useState, useEffect, useMemo, useRef } = React;
 
-        // --- DADOS INICIAIS ---
+        // --- DADOS INICIAIS (Extraídos do seu script Python) ---
         const initialData = [
             { id: 'b1', category: 'Conhecimentos Básicos', subject: 'Língua Portuguesa', topic: 'Compreensão, Gramática, Texto', weight: 1, theory: false, revisions: 0, questions: 0 },
             { id: 'b2', category: 'Conhecimentos Básicos', subject: 'Língua Inglesa', topic: 'Vocabulário e Gramática Básica', weight: 1, theory: false, revisions: 0, questions: 0 },
@@ -66,7 +66,9 @@
 
         const Icon = ({ name, size = 20, className, onClick }) => {
             React.useEffect(() => {
-                lucide.createIcons();
+                if (window.lucide) {
+                    window.lucide.createIcons();
+                }
             }, [name]);
             return <i data-lucide={name} width={size} height={size} className={className} onClick={onClick}></i>;
         };
@@ -77,8 +79,11 @@
             </div>
         );
 
-        const StatCard = ({ title, value, subtitle, icon, color }) => (
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4">
+        const StatCard = ({ title, value, subtitle, icon, color, onClick, isClickable }) => (
+            <div 
+                onClick={onClick}
+                className={`bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4 ${isClickable ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}`}
+            >
                 <div className={`p-3 rounded-lg ${color} bg-opacity-10 text-${color.replace('bg-', '')}`}>
                     <Icon name={icon} className={color.replace('bg-', 'text-')} />
                 </div>
@@ -91,23 +96,55 @@
         );
 
         const Timer = () => {
-            const [seconds, setSeconds] = useState(0);
             const [isActive, setIsActive] = useState(false);
-            const [mode, setMode] = useState(25 * 60); // 25 min default
+            const [mode, setMode] = useState(25 * 60); // Default timer value
+            const [initialMode, setInitialMode] = useState(25 * 60); // Store initial to reset properly
+            
+            // Som de notificação (ding simples)
+            const audioRef = useRef(new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3'));
+
+            const playSound = () => {
+                audioRef.current.currentTime = 0;
+                audioRef.current.play().catch(e => console.log("Audio play failed (user interaction needed first)", e));
+            };
 
             useEffect(() => {
                 let interval = null;
+                
                 if (isActive && mode > 0) {
                     interval = setInterval(() => {
-                        setMode(prev => prev - 1);
-                        setSeconds(prev => prev + 1);
+                        setMode((prev) => prev - 1);
                     }, 1000);
-                } else if (mode === 0) {
+                } else if (mode === 0 && isActive) {
+                    // Timer finished naturally
                     setIsActive(false);
-                    // Play sound or alert could go here
+                    playSound();
+                    // Opcional: alertar ou notificar visualmente
                 }
+                
                 return () => clearInterval(interval);
             }, [isActive, mode]);
+
+            const handleStartPause = () => {
+                setIsActive(!isActive);
+            };
+
+            const handleReset = () => {
+                setIsActive(false);
+                setMode(initialMode);
+            };
+
+            const handleFinishNow = () => {
+                setIsActive(false);
+                setMode(0);
+                playSound();
+            };
+
+            const setTimerMode = (minutes) => {
+                setIsActive(false);
+                setMode(minutes * 60);
+                setInitialMode(minutes * 60);
+            };
 
             const formatTime = (totalSeconds) => {
                 const mins = Math.floor(totalSeconds / 60);
@@ -118,26 +155,40 @@
             return (
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-6 flex flex-col items-center justify-center">
                     <h3 className="text-gray-500 font-medium mb-2">Cronômetro de Estudos</h3>
-                    <div className="text-5xl font-mono font-bold text-gray-800 mb-4 tracking-wider">
+                    <div className={`text-5xl font-mono font-bold mb-4 tracking-wider transition-colors ${mode === 0 ? 'text-green-600' : 'text-gray-800'}`}>
                         {formatTime(mode)}
                     </div>
-                    <div className="flex space-x-3">
-                        <button 
-                            onClick={() => setIsActive(!isActive)}
-                            className={`px-6 py-2 rounded-lg font-medium text-white transition-colors ${isActive ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-600 hover:bg-blue-700'}`}
+                    
+                    <div className="flex flex-wrap justify-center gap-2 mb-4">
+                         <button 
+                            onClick={handleStartPause}
+                            className={`px-6 py-2 rounded-lg font-medium text-white transition-colors ${isActive ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-600 hover:bg-blue-700'}`}
                         >
                             {isActive ? 'Pausar' : 'Iniciar'}
                         </button>
+                        
+                        {isActive && (
+                            <button 
+                                onClick={handleFinishNow}
+                                className="px-4 py-2 rounded-lg font-medium text-white bg-green-600 hover:bg-green-700 transition-colors flex items-center gap-2"
+                                title="Finalizar ciclo e tocar som"
+                            >
+                                <Icon name="check-square" size={16} />
+                                Finalizar
+                            </button>
+                        )}
+
                         <button 
-                            onClick={() => { setIsActive(false); setMode(25*60); }}
-                            className="px-6 py-2 rounded-lg font-medium text-gray-600 bg-gray-100 hover:bg-gray-200"
+                            onClick={handleReset}
+                            className="px-4 py-2 rounded-lg font-medium text-gray-600 bg-gray-100 hover:bg-gray-200"
                         >
                             Resetar
                         </button>
                     </div>
-                    <div className="mt-4 flex space-x-2 text-xs">
-                        <button onClick={() => { setIsActive(false); setMode(25*60); }} className="px-3 py-1 bg-blue-50 text-blue-600 rounded">Pomodoro (25m)</button>
-                        <button onClick={() => { setIsActive(false); setMode(50*60); }} className="px-3 py-1 bg-blue-50 text-blue-600 rounded">Longo (50m)</button>
+
+                    <div className="flex space-x-2 text-xs">
+                        <button onClick={() => setTimerMode(25)} className={`px-3 py-1 rounded border ${initialMode === 25*60 ? 'bg-blue-50 text-blue-600 border-blue-200' : 'bg-white text-gray-600 border-gray-200'}`}>Pomodoro (25m)</button>
+                        <button onClick={() => setTimerMode(50)} className={`px-3 py-1 rounded border ${initialMode === 50*60 ? 'bg-blue-50 text-blue-600 border-blue-200' : 'bg-white text-gray-600 border-gray-200'}`}>Longo (50m)</button>
                     </div>
                 </div>
             );
@@ -145,23 +196,62 @@
 
         const App = () => {
             const [activeTab, setActiveTab] = useState('dashboard');
+            
+            // Data de Estudos
             const [items, setItems] = useState(() => {
                 const saved = localStorage.getItem('caixaStudyData');
                 return saved ? JSON.parse(saved) : initialData;
             });
+            
+            // Configurações (Data da prova, etc)
+            const [settings, setSettings] = useState(() => {
+                const saved = localStorage.getItem('caixaSettings');
+                return saved ? JSON.parse(saved) : { targetDate: '' };
+            });
+
+            // UI States
             const [showAddForm, setShowAddForm] = useState(false);
+            const [isEditingDate, setIsEditingDate] = useState(false);
             const [newItem, setNewItem] = useState({
                 category: 'Conhecimentos Básicos',
                 subject: '',
                 topic: '',
                 weight: 1
             });
+            const [editingId, setEditingId] = useState(null);
+            const [editFormData, setEditFormData] = useState({ subject: '', topic: '' });
 
+            // Persistência
             useEffect(() => {
                 localStorage.setItem('caixaStudyData', JSON.stringify(items));
             }, [items]);
 
-            // --- AÇÕES ---
+            useEffect(() => {
+                localStorage.setItem('caixaSettings', JSON.stringify(settings));
+            }, [settings]);
+
+            // --- DATE LOGIC ---
+            const handleDateChange = (e) => {
+                setSettings({ ...settings, targetDate: e.target.value });
+            };
+
+            const calculateDaysLeft = () => {
+                if (!settings.targetDate) return null;
+                const target = new Date(settings.targetDate);
+                // Set target time to end of day to avoid partial day weirdness
+                target.setHours(23, 59, 59, 999); 
+                
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                const diffTime = target - today;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                return diffDays; 
+            };
+            
+            const daysLeft = calculateDaysLeft();
+
+            // --- ITEM ACTIONS ---
             const toggleTheory = (id) => {
                 setItems(prev => prev.map(item => item.id === id ? { ...item, theory: !item.theory } : item));
             };
@@ -196,13 +286,7 @@
                     questions: 0
                 }]);
                 
-                // Reset form
-                setNewItem({
-                    category: 'Conhecimentos Básicos',
-                    subject: '',
-                    topic: '',
-                    weight: 1
-                });
+                setNewItem({ category: 'Conhecimentos Básicos', subject: '', topic: '', weight: 1 });
                 setShowAddForm(false);
             };
 
@@ -212,18 +296,36 @@
                 }
             };
 
-            // --- CÁLCULOS E ESTATÍSTICAS ---
+            const handleEditClick = (item) => {
+                setEditingId(item.id);
+                setEditFormData({ subject: item.subject, topic: item.topic });
+            };
+
+            const handleCancelClick = () => {
+                setEditingId(null);
+                setEditFormData({ subject: '', topic: '' });
+            };
+
+            const handleSaveClick = (id) => {
+                setItems(prev => prev.map(item => {
+                    if (item.id === id) {
+                        return { ...item, subject: editFormData.subject, topic: editFormData.topic };
+                    }
+                    return item;
+                }));
+                setEditingId(null);
+            };
+
+            // --- STATS ---
             const stats = useMemo(() => {
                 const totalItems = items.length;
                 const theoryDone = items.filter(i => i.theory).length;
                 const totalQuestions = items.reduce((acc, curr) => acc + curr.questions, 0);
                 const totalRevisions = items.reduce((acc, curr) => acc + curr.revisions, 0);
                 const progress = totalItems === 0 ? 0 : Math.round((theoryDone / totalItems) * 100);
-                
                 return { totalItems, theoryDone, totalQuestions, totalRevisions, progress };
             }, [items]);
 
-            // Lógica do Ciclo de Estudos
             const studyCycle = useMemo(() => {
                 const scoredItems = items.map(item => ({
                     ...item,
@@ -251,7 +353,7 @@
                         <div className="p-6 border-b border-slate-800">
                             <h1 className="text-xl font-bold flex items-center gap-2">
                                 <Icon name="book-open" className="text-blue-400" />
-                                PLANO GERAL
+                                CAIXA 2025
                             </h1>
                             <p className="text-xs text-slate-400 mt-1">Engenharia Mecânica</p>
                         </div>
@@ -267,7 +369,7 @@
                             </button>
                         </nav>
                         <div className="p-4 border-t border-slate-800 text-xs text-slate-500 text-center">
-                            Todos os direitos reservados (c).
+                            Todos os direitos reservados.
                         </div>
                     </aside>
 
@@ -284,7 +386,7 @@
                     {/* Main Content */}
                     <main className="flex-1 p-6 md:p-8 mt-14 md:mt-0 overflow-y-auto h-screen custom-scrollbar">
                         
-                        {/* --- VIEW: DASHBOARD --- */}
+                        {/* --- DASHBOARD --- */}
                         {activeTab === 'dashboard' && (
                             <div className="max-w-5xl mx-auto animate-fade-in">
                                 <h2 className="text-2xl font-bold text-gray-800 mb-6">Visão Geral</h2>
@@ -293,7 +395,43 @@
                                     <StatCard title="Progresso Teórico" value={`${stats.progress}%`} subtitle={`${stats.theoryDone}/${stats.totalItems} tópicos`} icon="book" color="bg-blue-600" />
                                     <StatCard title="Questões Feitas" value={stats.totalQuestions} subtitle="Acumulado total" icon="check-circle" color="bg-green-600" />
                                     <StatCard title="Revisões" value={stats.totalRevisions} subtitle="Ciclos completados" icon="rotate-cw" color="bg-purple-600" />
-                                    <StatCard title="Dias Restantes" value="--" subtitle="Defina sua meta" icon="calendar" color="bg-orange-500" />
+                                    
+                                    {/* Card Dias Restantes (Interativo) */}
+                                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4 cursor-pointer hover:shadow-md transition-shadow relative group">
+                                        <div className="p-3 rounded-lg bg-orange-500 bg-opacity-10 text-orange-500">
+                                            <Icon name="calendar" className="text-orange-500" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className="text-gray-500 text-sm font-medium flex justify-between">
+                                                Dias Restantes
+                                                <button onClick={() => setIsEditingDate(!isEditingDate)} className="opacity-0 group-hover:opacity-100 transition-opacity text-blue-500 hover:text-blue-700">
+                                                    <Icon name="pencil" size={14} />
+                                                </button>
+                                            </h3>
+                                            
+                                            {isEditingDate || daysLeft === null ? (
+                                                <div className="mt-1">
+                                                    <input 
+                                                        type="date" 
+                                                        value={settings.targetDate} 
+                                                        onChange={handleDateChange}
+                                                        className="text-sm border rounded p-1 w-full outline-none focus:ring-2 focus:ring-orange-200"
+                                                        onBlur={() => setIsEditingDate(false)}
+                                                        autoFocus
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <p className="text-2xl font-bold text-gray-800">
+                                                        {daysLeft >= 0 ? daysLeft : "Dia!"}
+                                                    </p>
+                                                    <p className="text-xs text-gray-400">
+                                                        {daysLeft >= 0 ? `Até ${new Date(settings.targetDate).toLocaleDateString('pt-BR')}` : "Data passada ou hoje"}
+                                                    </p>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -341,7 +479,7 @@
                             </div>
                         )}
 
-                        {/* --- VIEW: TRACKER (EDITAL) --- */}
+                        {/* --- TRACKER --- */}
                         {activeTab === 'tracker' && (
                             <div className="max-w-6xl mx-auto">
                                 <div className="flex justify-between items-center mb-6">
@@ -447,14 +585,39 @@
                                                             <th className="px-6 py-3 font-medium text-center">Teoria</th>
                                                             <th className="px-6 py-3 font-medium text-center">Revisões</th>
                                                             <th className="px-6 py-3 font-medium text-center">Questões</th>
-                                                            <th className="px-6 py-3 font-medium text-center w-10"></th>
+                                                            <th className="px-6 py-3 font-medium text-center min-w-[100px]">Ações</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-gray-100">
                                                         {catItems.map(item => (
                                                             <tr key={item.id} className="hover:bg-blue-50/30 transition-colors group">
-                                                                <td className="px-6 py-4 text-sm font-medium text-gray-900">{item.subject}</td>
-                                                                <td className="px-6 py-4 text-sm text-gray-600">{item.topic}</td>
+                                                                {editingId === item.id ? (
+                                                                    <>
+                                                                        <td className="px-6 py-4">
+                                                                            <input 
+                                                                                type="text" 
+                                                                                value={editFormData.subject}
+                                                                                onChange={(e) => setEditFormData({...editFormData, subject: e.target.value})}
+                                                                                className="w-full p-2 border border-blue-300 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                                                                autoFocus
+                                                                            />
+                                                                        </td>
+                                                                        <td className="px-6 py-4">
+                                                                            <input 
+                                                                                type="text" 
+                                                                                value={editFormData.topic}
+                                                                                onChange={(e) => setEditFormData({...editFormData, topic: e.target.value})}
+                                                                                className="w-full p-2 border border-blue-300 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                                                            />
+                                                                        </td>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <td className="px-6 py-4 text-sm font-medium text-gray-900">{item.subject}</td>
+                                                                        <td className="px-6 py-4 text-sm text-gray-600">{item.topic}</td>
+                                                                    </>
+                                                                )}
+                                                                
                                                                 <td className="px-6 py-4 text-center">
                                                                     <input 
                                                                         type="number" 
@@ -487,13 +650,41 @@
                                                                     </div>
                                                                 </td>
                                                                 <td className="px-6 py-4 text-center">
-                                                                     <button 
-                                                                        onClick={() => deleteItem(item.id)}
-                                                                        className="text-gray-300 hover:text-red-500 transition-colors p-1"
-                                                                        title="Excluir tópico"
-                                                                    >
-                                                                        <Icon name="trash-2" size={16} />
-                                                                    </button>
+                                                                    {editingId === item.id ? (
+                                                                        <div className="flex items-center justify-center gap-2">
+                                                                            <button 
+                                                                                onClick={() => handleSaveClick(item.id)}
+                                                                                className="text-green-600 hover:text-green-800 p-1 bg-green-50 rounded"
+                                                                                title="Salvar"
+                                                                            >
+                                                                                <Icon name="check" size={16} />
+                                                                            </button>
+                                                                            <button 
+                                                                                onClick={handleCancelClick}
+                                                                                className="text-red-500 hover:text-red-700 p-1 bg-red-50 rounded"
+                                                                                title="Cancelar"
+                                                                            >
+                                                                                <Icon name="x" size={16} />
+                                                                            </button>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="flex items-center justify-center gap-2">
+                                                                            <button 
+                                                                                onClick={() => handleEditClick(item)}
+                                                                                className="text-gray-300 hover:text-blue-500 transition-colors p-1"
+                                                                                title="Editar tópico"
+                                                                            >
+                                                                                <Icon name="pencil" size={16} />
+                                                                            </button>
+                                                                            <button 
+                                                                                onClick={() => deleteItem(item.id)}
+                                                                                className="text-gray-300 hover:text-red-500 transition-colors p-1"
+                                                                                title="Excluir tópico"
+                                                                            >
+                                                                                <Icon name="trash-2" size={16} />
+                                                                            </button>
+                                                                        </div>
+                                                                    )}
                                                                 </td>
                                                             </tr>
                                                         ))}
@@ -506,7 +697,7 @@
                             </div>
                         )}
 
-                        {/* --- VIEW: CYCLE (CICLO) --- */}
+                        {/* --- CYCLE --- */}
                         {activeTab === 'cycle' && (
                             <div className="max-w-4xl mx-auto">
                                 <h2 className="text-2xl font-bold text-gray-800 mb-2">Ciclo de Estudos Inteligente</h2>
