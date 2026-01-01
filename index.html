@@ -5,37 +5,842 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Estudo de Alta Performance</title>
     
-    <!-- React & ReactDOM (Production) -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@17/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400&display=swap" rel="stylesheet">
-    
-    <!-- CSS Custom -->
-    <link rel="stylesheet" href="style.css">
+
+    <style>
+        :root {
+            --bg-paper: #FDFBF7;
+            --ink-main: #2D2D2D;
+            --ink-faded: #888888;
+            --lines: #E0E0E0;
+            --brick-red: #A63D40;
+            --highlight: #E3D5CA;
+        }
+
+        body {
+            background-color: var(--bg-paper);
+            color: var(--ink-main);
+            font-family: 'Merriweather', serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+        .border-line { border: 1px solid var(--lines); }
+        .border-b-line { border-bottom: 1px solid var(--lines); }
+        .border-t-line { border-top: 1px solid var(--lines); }
+
+        *:focus { outline: none; }
+        
+        .edit-input {
+            background: transparent;
+            border-bottom: 1px dashed var(--ink-faded);
+            color: inherit;
+            font: inherit;
+            width: 100%;
+        }
+        .edit-input:focus { border-bottom: 1px solid var(--ink-main); }
+
+        .trq-toggle {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: #ccc;
+            user-select: none;
+        }
+        .trq-toggle.active {
+            color: var(--ink-main);
+            font-weight: bold;
+        }
+        
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .paper-grid {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0.03;
+            background-image: linear-gradient(var(--ink-main) 1px, transparent 1px);
+            background-size: 100% 2rem;
+            z-index: 0;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.2);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .modal-content {
+            background: var(--bg-paper);
+            border: 1px solid var(--lines);
+            border-radius: 4px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 100%;
+            position: relative;
+        }
+
+        .btn-primary {
+            background: var(--ink-main);
+            color: var(--bg-paper);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-primary:hover {
+            background: black;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--ink-main);
+            border: 1px solid var(--lines);
+            padding: 0.75rem 1.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--ink-main);
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--ink-faded);
+        }
+
+        .icon-btn:hover {
+            color: var(--ink-main);
+        }
+    </style>
 </head>
 <body>
     <div id="root"></div>
-    
-    <!-- App JavaScript -->
-    <script src="app.js"></script>
-    
-    <!-- Initialize Lucide Icons -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            if (window.lucide) {
-                lucide.createIcons();
+
+    <script type="text/babel">
+        // Dados iniciais
+        const INITIAL_SUBJECTS = [
+            { id: 's1', name: 'Direito Constitucional', weight: 3 },
+            { id: 's2', name: 'Contabilidade Geral', weight: 2 },
+            { id: 's3', name: 'Língua Portuguesa', weight: 1 },
+            { id: 's4', name: 'Direito Administrativo', weight: 2 },
+        ];
+
+        const INITIAL_TOPICS = [
+            { id: 't1', subjectId: 's1', title: 'Direitos Fundamentais', t: true, r: 1, q: false, lastInteraction: '2023-10-20' },
+            { id: 't2', subjectId: 's1', title: 'Organização do Estado', t: false, r: 0, q: false, lastInteraction: null },
+            { id: 't4', subjectId: 's2', title: 'Balanço Patrimonial', t: false, r: 0, q: false, lastInteraction: null },
+        ];
+
+        // Componente Icon simplificado
+        class Icon extends React.Component {
+            render() {
+                return React.createElement('i', {
+                    className: this.props.className || '',
+                    onClick: this.props.onClick,
+                    style: {
+                        width: this.props.size || 18,
+                        height: this.props.size || 18,
+                        display: 'inline-block',
+                        ...this.props.style
+                    },
+                    dangerouslySetInnerHTML: this.getIconSVG()
+                });
             }
-        });
+
+            getIconSVG() {
+                const icons = {
+                    'x': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>',
+                    'arrow-left': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>',
+                    'layout': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>',
+                    'list-tree': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12h-8"></path><path d="M21 6H8"></path><path d="M21 18h-8"></path><path d="M3 6v4c0 1.1.9 2 2 2h3"></path><path d="M3 10v6c0 1.1.9 2 2 2h3"></path></svg>',
+                    'bar-chart-2': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>',
+                    'play': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>',
+                    'skip-forward': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>',
+                    'lightbulb': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M15.09 14c.18-.98.33-2.05.33-3 0-4.42-3.58-8-8-8S0 6.58 0 11c0 2.05.78 4.1 2 5.65"></path><path d="M18 11.37c1.22-.84 2-2.17 2-3.65 0-2.76-2.24-5-5-5-1.9 0-3.51 1.06-4.35 2.62"></path></svg>',
+                    'check-circle': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>',
+                    'rotate-cw': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>',
+                    'pencil': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>',
+                    'trash-2': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>',
+                    'plus': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>',
+                    'book-open': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>'
+                };
+                return { __html: icons[this.props.name] || icons['x'] };
+            }
+        }
+
+        // Funções utilitárias
+        function calculateDaysLeft(dateStr) {
+            if (!dateStr) return 0;
+            const diff = new Date(dateStr) - new Date();
+            return Math.ceil(diff / (1000 * 60 * 60 * 24));
+        }
+
+        function formatTime(seconds) {
+            const absSeconds = Math.abs(seconds);
+            const m = Math.floor(absSeconds / 60).toString().padStart(2, '0');
+            const s = (absSeconds % 60).toString().padStart(2, '0');
+            return `${seconds < 0 ? '+' : ''}${m}:${s}`;
+        }
+
+        // Modal Component
+        class Modal extends React.Component {
+            render() {
+                if (!this.props.isOpen) return null;
+                
+                return React.createElement('div', {
+                    className: 'modal-overlay fade-in'
+                },
+                    React.createElement('div', {
+                        className: 'modal-content'
+                    },
+                        React.createElement('button', {
+                            className: 'icon-btn absolute top-4 right-4',
+                            onClick: this.props.onClose
+                        }, React.createElement(Icon, { name: 'x', size: 18 })),
+                        React.createElement('h3', {
+                            className: 'font-serif font-bold text-xl mb-4 text-[#2D2D2D]'
+                        }, this.props.title),
+                        this.props.children
+                    )
+                );
+            }
+        }
+
+        // Time Selector
+        class TimeSelector extends React.Component {
+            render() {
+                return React.createElement('div', {
+                    className: 'flex flex-col items-center justify-center h-full fade-in'
+                },
+                    React.createElement('h3', {
+                        className: 'text-xl font-serif mb-8 text-gray-500 italic'
+                    }, 'Tempo disponível para esta sessão:'),
+                    React.createElement('div', { className: 'flex gap-6' },
+                        [25, 35, 50].map(min => 
+                            React.createElement('button', {
+                                key: min,
+                                onClick: () => this.props.onSelect(min),
+                                className: 'w-24 h-24 rounded-full border-line hover:border-[#2D2D2D] hover:bg-[#E3D5CA] transition-all flex flex-col items-center justify-center group'
+                            },
+                                React.createElement('span', {
+                                    className: 'text-2xl font-mono font-bold text-[#2D2D2D]'
+                                }, min),
+                                React.createElement('span', {
+                                    className: 'text-[10px] uppercase tracking-widest text-gray-400 group-hover:text-[#2D2D2D]'
+                                }, 'Min')
+                            )
+                        )
+                    )
+                );
+            }
+        }
+
+        // Pomodoro Timer
+        class Pomodoro extends React.Component {
+            constructor(props) {
+                super(props);
+                this.state = {
+                    mode: 'setup',
+                    plannedMinutes: 0,
+                    startTime: null,
+                    elapsed: 0,
+                    isRunning: false,
+                    comprehension: null,
+                    questionsCount: '',
+                    notes: ''
+                };
+                this.timerInterval = null;
+            }
+
+            componentDidMount() {
+                const savedState = localStorage.getItem('timer_state');
+                if (savedState) {
+                    const state = JSON.parse(savedState);
+                    if (state.subjectId === this.props.subject.id && (Date.now() - state.timestamp < 43200000)) {
+                        this.setState({
+                            plannedMinutes: state.plannedMinutes,
+                            startTime: state.startTime,
+                            elapsed: state.isRunning ? state.elapsed + Math.floor((Date.now() - state.lastSave) / 1000) : state.elapsed,
+                            isRunning: state.isRunning,
+                            mode: 'running'
+                        });
+                        if (state.isRunning) {
+                            this.startTimer();
+                        }
+                    }
+                }
+            }
+
+            componentDidUpdate(prevProps, prevState) {
+                if (this.state.isRunning && !prevState.isRunning) {
+                    this.startTimer();
+                } else if (!this.state.isRunning && prevState.isRunning) {
+                    this.stopTimer();
+                }
+            }
+
+            componentWillUnmount() {
+                this.stopTimer();
+            }
+
+            startTimer() {
+                this.timerInterval = setInterval(() => {
+                    this.setState(prevState => {
+                        const newElapsed = prevState.elapsed + 1;
+                        localStorage.setItem('timer_state', JSON.stringify({
+                            subjectId: this.props.subject.id,
+                            plannedMinutes: prevState.plannedMinutes,
+                            startTime: prevState.startTime || Date.now(),
+                            elapsed: newElapsed,
+                            isRunning: true,
+                            lastSave: Date.now(),
+                            timestamp: Date.now()
+                        }));
+                        return { elapsed: newElapsed };
+                    });
+                }, 1000);
+            }
+
+            stopTimer() {
+                if (this.timerInterval) {
+                    clearInterval(this.timerInterval);
+                    this.timerInterval = null;
+                }
+            }
+
+            handleStart = (mins) => {
+                this.setState({
+                    plannedMinutes: mins,
+                    startTime: Date.now(),
+                    elapsed: 0,
+                    isRunning: true,
+                    mode: 'running'
+                });
+            }
+
+            handleEndSession = () => {
+                this.setState({ isRunning: false, mode: 'feedback' });
+                localStorage.removeItem('timer_state');
+                this.stopTimer();
+            }
+
+            submitSession = () => {
+                const plannedSec = this.state.plannedMinutes * 60;
+                const overtime = Math.max(0, this.state.elapsed - plannedSec);
+                const actualExecuted = Math.min(this.state.elapsed, plannedSec);
+                
+                this.props.onFinish({
+                    subjectId: this.props.subject.id,
+                    plannedSeconds: plannedSec,
+                    executedSeconds: actualExecuted,
+                    overtimeSeconds: overtime,
+                    questions: parseInt(this.state.questionsCount) || 0,
+                    comprehension: this.state.comprehension,
+                    notes: this.state.notes
+                });
+            }
+
+            renderSetup() {
+                return React.createElement(TimeSelector, { onSelect: this.handleStart });
+            }
+
+            renderFeedback() {
+                return React.createElement('div', {
+                    className: 'h-full flex flex-col justify-center items-center fade-in max-w-md mx-auto'
+                },
+                    React.createElement('h2', {
+                        className: 'text-2xl font-serif mb-6'
+                    }, 'Registro da Sessão'),
+                    React.createElement('div', { className: 'w-full space-y-6' },
+                        React.createElement('div', null,
+                            React.createElement('label', {
+                                className: 'block text-xs font-mono uppercase tracking-widest text-gray-500 mb-3'
+                            }, 'Nível de Compreensão'),
+                            React.createElement('div', { className: 'flex justify-between gap-4' },
+                                ['Baixa', 'Média', 'Alta'].map(level =>
+                                    React.createElement('button', {
+                                        key: level,
+                                        onClick: () => this.setState({ comprehension: level }),
+                                        className: `flex-1 py-3 border-line text-sm font-mono transition-all ${this.state.comprehension === level ? 'bg-[#2D2D2D] text-white' : 'hover:border-[#2D2D2D]'}`
+                                    }, level)
+                                )
+                            )
+                        ),
+                        React.createElement('div', null,
+                            React.createElement('label', {
+                                className: 'block text-xs font-mono uppercase tracking-widest text-gray-500 mb-2'
+                            }, 'Questões Realizadas'),
+                            React.createElement('input', {
+                                type: 'number',
+                                className: 'w-full bg-transparent border-b-line p-2 font-mono text-lg focus:border-[#2D2D2D]',
+                                placeholder: '0',
+                                value: this.state.questionsCount,
+                                onChange: e => this.setState({ questionsCount: e.target.value })
+                            })
+                        ),
+                        React.createElement('div', null,
+                            React.createElement('label', {
+                                className: 'block text-xs font-mono uppercase tracking-widest text-gray-500 mb-2'
+                            }, 'Notas Rápidas (Salvas no Histórico)'),
+                            React.createElement('textarea', {
+                                className: 'w-full bg-transparent border-line p-3 font-serif text-sm h-24 resize-none focus:border-[#2D2D2D]',
+                                placeholder: 'O que fixar? O que revisar?',
+                                value: this.state.notes,
+                                onChange: e => this.setState({ notes: e.target.value })
+                            })
+                        ),
+                        React.createElement('button', {
+                            onClick: this.submitSession,
+                            disabled: !this.state.comprehension,
+                            className: 'btn-primary w-full disabled:opacity-50'
+                        }, 'Salvar & Continuar')
+                    )
+                );
+            }
+
+            renderRunning() {
+                const plannedSeconds = this.state.plannedMinutes * 60;
+                const isOvertime = this.state.elapsed > plannedSeconds;
+                const displayTime = isOvertime ? this.state.elapsed - plannedSeconds : plannedSeconds - this.state.elapsed;
+
+                return React.createElement('div', {
+                    className: 'h-full flex flex-col items-center justify-center fade-in relative'
+                },
+                    React.createElement('button', {
+                        onClick: this.props.onCancel,
+                        className: 'absolute top-0 left-0 text-xs font-mono text-gray-400 hover:text-[#2D2D2D] flex items-center gap-2'
+                    },
+                        React.createElement(Icon, { name: 'arrow-left', size: 14 }),
+                        ' VOLTAR'
+                    ),
+                    React.createElement('div', { className: 'text-center mb-8' },
+                        React.createElement('span', {
+                            className: 'text-xs font-mono text-gray-400 uppercase tracking-widest block mb-2'
+                        }, 'Focando em'),
+                        React.createElement('h2', {
+                            className: 'text-3xl font-bold font-serif max-w-lg leading-tight'
+                        }, this.props.subject.name)
+                    ),
+                    React.createElement('div', {
+                        className: `text-[100px] md:text-[140px] leading-none font-mono font-light tracking-tighter tabular-nums mb-4 ${isOvertime ? 'text-[#A63D40]' : 'text-[#2D2D2D]'}`
+                    }, formatTime(displayTime)),
+                    isOvertime && React.createElement('div', { className: 'text-center mb-8' },
+                        React.createElement('span', {
+                            className: 'text-[#A63D40] font-mono text-xs uppercase tracking-widest animate-pulse block'
+                        }, 'Tempo Extra (Overrun)'),
+                        React.createElement('span', {
+                            className: 'text-gray-400 font-mono text-[10px]'
+                        }, 'Contando separadamente do planejado')
+                    ),
+                    React.createElement('div', { className: 'flex gap-4 mt-8' },
+                        React.createElement('button', {
+                            onClick: () => this.setState({ isRunning: !this.state.isRunning }),
+                            className: 'btn-secondary w-32'
+                        }, this.state.isRunning ? 'Pausar' : 'Retomar'),
+                        React.createElement('button', {
+                            onClick: this.handleEndSession,
+                            className: 'btn-primary w-32'
+                        }, 'Encerrar')
+                    )
+                );
+            }
+
+            render() {
+                switch(this.state.mode) {
+                    case 'setup':
+                        return this.renderSetup();
+                    case 'feedback':
+                        return this.renderFeedback();
+                    case 'running':
+                        return this.renderRunning();
+                    default:
+                        return this.renderSetup();
+                }
+            }
+        }
+
+        // Auth Screen
+        class AuthScreen extends React.Component {
+            constructor(props) {
+                super(props);
+                this.state = {
+                    isRegister: false,
+                    username: '',
+                    password: '',
+                    error: ''
+                };
+            }
+
+            handleSubmit = (e) => {
+                e.preventDefault();
+                this.setState({ error: '' });
+                
+                if (!this.state.username || !this.state.password) {
+                    this.setState({ error: 'Preencha todos os campos' });
+                    return;
+                }
+
+                const users = JSON.parse(localStorage.getItem('studyApp_users') || '[]');
+                
+                if (this.state.isRegister) {
+                    if (users.find(u => u.username === this.state.username)) {
+                        this.setState({ error: 'Usuário já existe' });
+                        return;
+                    }
+                    const newUser = { 
+                        username: this.state.username, 
+                        password: this.state.password 
+                    };
+                    localStorage.setItem('studyApp_users', JSON.stringify([...users, newUser]));
+                    this.props.onLogin(newUser);
+                } else {
+                    const user = users.find(u => 
+                        u.username === this.state.username && 
+                        u.password === this.state.password
+                    );
+                    if (user) {
+                        this.props.onLogin(user);
+                    } else {
+                        this.setState({ error: 'Credenciais inválidas' });
+                    }
+                }
+            }
+
+            render() {
+                return React.createElement('div', {
+                    className: 'min-h-screen flex items-center justify-center fade-in'
+                },
+                    React.createElement('div', {
+                        className: 'w-full max-w-md p-8 border-line bg-white/50 rounded-lg text-center'
+                    },
+                        React.createElement('div', { className: 'mb-6 flex justify-center' },
+                            React.createElement('div', {
+                                className: 'p-4 rounded-full bg-[#E3D5CA] text-[#2D2D2D]'
+                            }, React.createElement(Icon, { name: 'book-open', size: 32 }))
+                        ),
+                        React.createElement('h1', {
+                            className: 'text-3xl font-serif font-bold mb-2'
+                        }, 'Planejamento de Estudos'),
+                        React.createElement('p', {
+                            className: 'text-gray-500 font-mono text-xs mb-8 uppercase tracking-widest'
+                        }, 'Foco. Clareza. Resultado.'),
+                        
+                        React.createElement('form', {
+                            onSubmit: this.handleSubmit,
+                            className: 'space-y-4 text-left'
+                        },
+                            this.state.error && React.createElement('div', {
+                                className: 'text-xs text-[#A63D40] font-mono text-center mb-4'
+                            }, this.state.error),
+                            
+                            React.createElement('input', {
+                                type: 'text',
+                                value: this.state.username,
+                                onChange: e => this.setState({ username: e.target.value }),
+                                className: 'w-full bg-transparent border-b-line p-2 font-serif text-lg focus:border-[#2D2D2D]',
+                                placeholder: 'Usuário'
+                            }),
+                            
+                            React.createElement('input', {
+                                type: 'password',
+                                value: this.state.password,
+                                onChange: e => this.setState({ password: e.target.value }),
+                                className: 'w-full bg-transparent border-b-line p-2 font-serif text-lg focus:border-[#2D2D2D]',
+                                placeholder: 'Senha'
+                            }),
+                            
+                            React.createElement('button', {
+                                type: 'submit',
+                                className: 'btn-primary w-full mt-4'
+                            }, this.state.isRegister ? 'Criar Conta' : 'Entrar')
+                        ),
+                        
+                        React.createElement('div', {
+                            className: 'mt-6 pt-6 border-t-line'
+                        },
+                            React.createElement('button', {
+                                onClick: () => {
+                                    this.setState({ 
+                                        isRegister: !this.state.isRegister,
+                                        error: '',
+                                        username: '',
+                                        password: ''
+                                    });
+                                },
+                                className: 'text-xs font-mono text-gray-500 hover:text-[#2D2D2D] underline decoration-dotted'
+                            }, this.state.isRegister ? 'Já tenho conta? Entrar' : 'Não tem conta? Cadastrar')
+                        )
+                    )
+                );
+            }
+        }
+
+        // Plan List
+        class PlanList extends React.Component {
+            constructor(props) {
+                super(props);
+                this.state = {
+                    plans: [],
+                    showNewModal: false,
+                    newPlanName: ''
+                };
+            }
+
+            componentDidMount() {
+                this.loadPlans();
+            }
+
+            loadPlans = () => {
+                const userPlans = JSON.parse(localStorage.getItem(`app_plans_${this.props.user.username}`) || '[]');
+                this.setState({ plans: userPlans });
+            }
+
+            createPlan = (e) => {
+                e.preventDefault();
+                if (!this.state.newPlanName) return;
+                
+                const newPlan = {
+                    id: Date.now().toString(),
+                    title: this.state.newPlanName,
+                    examDate: '',
+                    subjects: INITIAL_SUBJECTS,
+                    topics: INITIAL_TOPICS,
+                    sessions: [],
+                    queueIds: INITIAL_SUBJECTS.map(s => s.id),
+                    createdAt: new Date().toISOString()
+                };
+                
+                const updatedPlans = [...this.state.plans, newPlan];
+                this.setState({ plans: updatedPlans, showNewModal: false, newPlanName: '' });
+                localStorage.setItem(`app_plans_${this.props.user.username}`, JSON.stringify(updatedPlans));
+            }
+
+            deletePlan = (id, e) => {
+                e.stopPropagation();
+                if (confirm('Tem certeza que deseja excluir?')) {
+                    const updated = this.state.plans.filter(p => p.id !== id);
+                    this.setState({ plans: updated });
+                    localStorage.setItem(`app_plans_${this.props.user.username}`, JSON.stringify(updated));
+                }
+            }
+
+            render() {
+                return React.createElement('div', {
+                    className: 'min-h-screen flex flex-col items-center justify-center fade-in p-4'
+                },
+                    React.createElement('div', {
+                        className: 'w-full max-w-2xl'
+                    },
+                        React.createElement('header', {
+                            className: 'flex justify-between items-end mb-8 border-b-line pb-4'
+                        },
+                            React.createElement('div', null,
+                                React.createElement('h1', {
+                                    className: 'text-3xl font-serif font-bold mb-1'
+                                }, 'Seus Cadernos'),
+                                React.createElement('p', {
+                                    className: 'text-xs font-mono text-gray-400 uppercase tracking-widest'
+                                }, `Olá, ${this.props.user.username}`)
+                            ),
+                            React.createElement('button', {
+                                onClick: this.props.onLogout,
+                                className: 'text-xs font-mono text-[#A63D40] hover:underline'
+                            }, 'Sair')
+                        ),
+                        
+                        React.createElement('div', {
+                            className: 'grid gap-4 md:grid-cols-2'
+                        },
+                            React.createElement('button', {
+                                onClick: () => this.setState({ showNewModal: true }),
+                                className: 'border-line border-dashed p-8 flex flex-col items-center justify-center gap-4 text-gray-400 hover:text-[#2D2D2D] hover:border-[#2D2D2D] transition-colors group h-48'
+                            },
+                                React.createElement(Icon, { name: 'plus', size: 32 }),
+                                React.createElement('span', {
+                                    className: 'font-mono text-xs uppercase tracking-widest'
+                                }, 'Novo Plano')
+                            ),
+                            
+                            this.state.plans.map(p =>
+                                React.createElement('div', {
+                                    key: p.id,
+                                    onClick: () => this.props.onSelectPlan(p.id),
+                                    className: 'border-line p-6 relative group hover:border-[#2D2D2D] transition-colors cursor-pointer bg-white/50 h-48 flex flex-col justify-between'
+                                },
+                                    React.createElement('div', null,
+                                        React.createElement('h3', {
+                                            className: 'font-serif font-bold text-xl mb-2'
+                                        }, p.title),
+                                        React.createElement('p', {
+                                            className: 'text-xs font-mono text-gray-500'
+                                        }, `Prova: ${p.examDate ? new Date(p.examDate).toLocaleDateString() : 'Indefinida'}`)
+                                    ),
+                                    React.createElement('div', {
+                                        className: 'flex justify-between items-end'
+                                    },
+                                        React.createElement('span', {
+                                            className: 'text-xs font-mono text-gray-400'
+                                        }, `${p.topics.length} Tópicos`),
+                                        React.createElement('button', {
+                                            onClick: (e) => this.deletePlan(p.id, e),
+                                            className: 'icon-btn opacity-0 group-hover:opacity-100'
+                                        }, React.createElement(Icon, { name: 'trash-2', size: 16 }))
+                                    )
+                                )
+                            )
+                        ),
+                        
+                        this.state.showNewModal && React.createElement('div', {
+                            className: 'modal-overlay'
+                        },
+                            React.createElement('div', {
+                                className: 'modal-content'
+                            },
+                                React.createElement('h3', {
+                                    className: 'font-serif font-bold text-xl mb-6'
+                                }, 'Novo Plano de Estudos'),
+                                React.createElement('input', {
+                                    autoFocus: true,
+                                    value: this.state.newPlanName,
+                                    onChange: e => this.setState({ newPlanName: e.target.value }),
+                                    className: 'w-full bg-transparent border-b-line p-2 font-serif text-lg mb-6 focus:border-[#2D2D2D]',
+                                    placeholder: 'Nome do Concurso'
+                                }),
+                                React.createElement('div', {
+                                    className: 'flex gap-4'
+                                },
+                                    React.createElement('button', {
+                                        onClick: () => this.setState({ showNewModal: false }),
+                                        className: 'btn-secondary flex-1'
+                                    }, 'Cancelar'),
+                                    React.createElement('button', {
+                                        onClick: this.createPlan,
+                                        disabled: !this.state.newPlanName,
+                                        className: 'btn-primary flex-1 disabled:opacity-50'
+                                    }, 'Criar')
+                                )
+                            )
+                        )
+                    )
+                );
+            }
+        }
+
+        // Main App
+        class App extends React.Component {
+            constructor(props) {
+                super(props);
+                this.state = {
+                    user: null,
+                    activePlan: null
+                };
+            }
+
+            componentDidMount() {
+                const savedUser = localStorage.getItem('study_user');
+                if (savedUser) {
+                    this.setState({ user: JSON.parse(savedUser) });
+                }
+            }
+
+            handleLogin = (user) => {
+                this.setState({ user });
+                localStorage.setItem('study_user', JSON.stringify(user));
+            }
+
+            handleLogout = () => {
+                this.setState({ user: null, activePlan: null });
+                localStorage.removeItem('study_user');
+            }
+
+            handleSelectPlan = (planId) => {
+                const plans = JSON.parse(localStorage.getItem(`app_plans_${this.state.user.username}`) || '[]');
+                const plan = plans.find(p => p.id === planId);
+                this.setState({ activePlan: plan });
+            }
+
+            handleBackToPlans = () => {
+                this.setState({ activePlan: null });
+            }
+
+            render() {
+                if (!this.state.user) {
+                    return React.createElement(AuthScreen, { onLogin: this.handleLogin });
+                }
+                
+                if (!this.state.activePlan) {
+                    return React.createElement(PlanList, {
+                        user: this.state.user,
+                        onSelectPlan: this.handleSelectPlan,
+                        onLogout: this.handleLogout
+                    });
+                }
+
+                // Retornar um placeholder para o workspace (simplificado por agora)
+                return React.createElement('div', {
+                    className: 'min-h-screen flex flex-col items-center justify-center'
+                },
+                    React.createElement('h1', {
+                        className: 'text-2xl font-serif mb-4'
+                    }, 'Workspace - Em construção'),
+                    React.createElement('button', {
+                        onClick: this.handleBackToPlans,
+                        className: 'btn-secondary'
+                    }, 'Voltar aos Planos'),
+                    React.createElement('p', {
+                        className: 'mt-4 text-gray-500'
+                    }, `Plano selecionado: ${this.state.activePlan.title}`)
+                );
+            }
+        }
+
+        // Renderizar a aplicação
+        ReactDOM.render(
+            React.createElement(App),
+            document.getElementById('root')
+        );
     </script>
 </body>
 </html>
