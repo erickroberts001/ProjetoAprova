@@ -9,8 +9,8 @@
     <link rel="icon" href="data:,">
 
     <!-- React & ReactDOM (Versões Fixas para Estabilidade) -->
-    <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.development.js"></script>
     
     <!-- Babel Standalone (Para compilar JSX no navegador) -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -45,6 +45,8 @@
             font-family: 'Merriweather', serif;
             -webkit-font-smoothing: antialiased;
             overflow-x: hidden;
+            margin: 0;
+            padding: 0;
         }
 
         .font-mono { font-family: 'JetBrains Mono', monospace; }
@@ -176,97 +178,88 @@
             { id: 't4', subjectId: 's2', title: 'Balanço Patrimonial', t: false, r: 0, q: false, lastInteraction: null },
         ];
 
-        // --- SISTEMA DE ÁUDIO ---
-        class SoundSystem {
-            constructor() {
-                this.audioContext = null;
-                this.isAudioEnabled = true;
-                this.initAudioContext();
-            }
+        // --- SISTEMA DE ÁUDIO SIMPLIFICADO E COMPATÍVEL ---
+        const createSoundSystem = () => {
+            let audioContext = null;
+            let isAudioEnabled = false;
             
-            initAudioContext() {
+            const initAudio = () => {
+                // Tenta inicializar o áudio apenas quando necessário
                 try {
                     if (window.AudioContext || window.webkitAudioContext) {
-                        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                        audioContext = new (window.AudioContext || window.webkitAudioContext)();
                         console.log('Sistema de áudio inicializado');
+                        isAudioEnabled = true;
                     }
                 } catch (e) {
                     console.warn('Não foi possível inicializar o sistema de áudio:', e);
-                    this.isAudioEnabled = false;
+                    isAudioEnabled = false;
                 }
-            }
+            };
             
-            // Som de conclusão de ciclo (suave e profissional)
-            playCycleCompleteSound() {
-                if (!this.isAudioEnabled || !this.audioContext) return;
+            // Som simples usando oscilador
+            const playSimpleTone = (frequency, duration) => {
+                if (!isAudioEnabled || !audioContext) {
+                    initAudio();
+                    if (!audioContext) return;
+                }
                 
                 try {
-                    const oscillator = this.audioContext.createOscillator();
-                    const gainNode = this.audioContext.createGain();
+                    // Se o contexto estiver suspenso, tenta retomar
+                    if (audioContext.state === 'suspended') {
+                        audioContext.resume();
+                    }
+                    
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
                     
                     oscillator.connect(gainNode);
-                    gainNode.connect(this.audioContext.destination);
+                    gainNode.connect(audioContext.destination);
                     
-                    // Frequências agradáveis para conclusão
-                    oscillator.frequency.setValueAtTime(523.25, this.audioContext.currentTime); // C5
-                    oscillator.frequency.setValueAtTime(659.25, this.audioContext.currentTime + 0.1); // E5
-                    oscillator.frequency.setValueAtTime(783.99, this.audioContext.currentTime + 0.2); // G5
+                    oscillator.frequency.value = frequency;
+                    oscillator.type = 'sine';
                     
-                    // Envelope suave
-                    gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
-                    gainNode.gain.linearRampToValueAtTime(0.2, this.audioContext.currentTime + 0.05);
-                    gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.5);
+                    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+                    gainNode.gain.linearRampToValueAtTime(0.1, audioContext.currentTime + 0.05);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
                     
-                    oscillator.start(this.audioContext.currentTime);
-                    oscillator.stop(this.audioContext.currentTime + 0.5);
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + duration);
                     
-                    // Se o contexto estiver suspenso (por políticas de autoplay), tente retomar
-                    if (this.audioContext.state === 'suspended') {
-                        this.audioContext.resume();
-                    }
                 } catch (e) {
-                    console.warn('Não foi possível tocar som:', e);
-                    this.isAudioEnabled = false;
+                    console.warn('Erro ao tocar som:', e);
+                    isAudioEnabled = false;
                 }
-            }
+            };
             
-            // Som de notificação (mais discreto)
-            playNotificationSound() {
-                if (!this.isAudioEnabled || !this.audioContext) return;
-                
-                try {
-                    const oscillator = this.audioContext.createOscillator();
-                    const gainNode = this.audioContext.createGain();
-                    
-                    oscillator.connect(gainNode);
-                    gainNode.connect(this.audioContext.destination);
-                    
-                    oscillator.frequency.setValueAtTime(880, this.audioContext.currentTime); // A5
-                    
-                    gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
-                    gainNode.gain.linearRampToValueAtTime(0.1, this.audioContext.currentTime + 0.05);
-                    gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.3);
-                    
-                    oscillator.start(this.audioContext.currentTime);
-                    oscillator.stop(this.audioContext.currentTime + 0.3);
-                    
-                    if (this.audioContext.state === 'suspended') {
-                        this.audioContext.resume();
-                    }
-                } catch (e) {
-                    console.warn('Não foi possível tocar som de notificação:', e);
-                }
-            }
+            // Som de conclusão de ciclo
+            const playCycleCompleteSound = () => {
+                playSimpleTone(523.25, 0.2);
+                setTimeout(() => playSimpleTone(659.25, 0.2), 100);
+                setTimeout(() => playSimpleTone(783.99, 0.3), 200);
+            };
             
-            // Teste do sistema de áudio
-            testSound() {
-                this.playCycleCompleteSound();
+            // Som de notificação
+            const playNotificationSound = () => {
+                playSimpleTone(880, 0.3);
+            };
+            
+            // Teste de som
+            const testSound = () => {
+                playCycleCompleteSound();
                 console.log('Teste de som realizado');
-            }
-        }
+            };
+            
+            return {
+                playCycleCompleteSound,
+                playNotificationSound,
+                testSound,
+                initAudio
+            };
+        };
 
-        // Inicializar sistema de áudio global
-        const soundSystem = new SoundSystem();
+        // Criar instância do sistema de som
+        const soundSystem = createSoundSystem();
 
         // --- COMPONENTES UI ---
         const Icon = ({ name, size = 18, className, onClick }) => {
@@ -351,7 +344,7 @@
             const modalClass = responsive ? "modal-responsive" : "w-full max-w-md";
             const contentClass = responsive ? "modal-content-responsive" : "";
             
-            return (
+            return ReactDOM.createPortal(
                 <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4 fade-in">
                     <div className={`bg-[#FDFBF7] border-line rounded shadow-xl relative ${modalClass}`}>
                         <div className={`p-6 md:p-8 ${contentClass}`}>
@@ -362,7 +355,8 @@
                             {children}
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             );
         };
 
@@ -578,7 +572,9 @@
                 const actualExecuted = Math.min(elapsed, plannedSec); 
                 
                 // Tocar som de conclusão
-                soundSystem.playCycleCompleteSound();
+                setTimeout(() => {
+                    soundSystem.playCycleCompleteSound();
+                }, 100);
                 
                 onFinish({
                     subjectId: subject.id,
@@ -663,7 +659,7 @@
                         </div>
                     </div>
 
-                    <div className={`text-[80px] md:text-[140px] leading-none font-mono font-light tracking-tighter tabular-nums mb-4 ${isOvertime ? 'text-[#A63D40]' : 'text-[#2D2D2D]`}>
+                    <div className={`text-[80px] md:text-[140px] leading-none font-mono font-light tracking-tighter tabular-nums mb-4 ${isOvertime ? 'text-[#A63D40]' : 'text-[#2D2D2D]'}`}>
                         {isOvertime ? '+' : ''}{formatTime(displayTime)}
                     </div>
 
@@ -1176,7 +1172,7 @@
 
             // Testar sistema de som
             const testSound = () => {
-                soundSystem.playCycleCompleteSound();
+                soundSystem.testSound();
             };
 
             // Edital Actions
@@ -1507,8 +1503,8 @@
             return <StudyWorkspace user={user} plan={activePlan} onBack={handleBackToPlans} />;
         };
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        // Inicializar o aplicativo
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
     </script>
 </body>
 </html>
