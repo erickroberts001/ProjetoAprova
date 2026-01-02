@@ -109,6 +109,50 @@
             50% { opacity: 0.8; }
         }
         .pulse-subtle { animation: pulse-subtle 2s infinite; }
+        
+        /* Modal responsivo */
+        .modal-responsive {
+            width: 90%;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        
+        @media (max-width: 640px) {
+            .modal-responsive {
+                width: 95%;
+                max-width: 95%;
+                padding: 1rem;
+            }
+            
+            .modal-content-responsive {
+                padding: 1rem;
+            }
+            
+            .ranking-item-responsive {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+            
+            .ranking-info-responsive {
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
+        
+        /* Feedback sonoro */
+        .sound-button {
+            position: relative;
+        }
+        
+        .sound-button::after {
+            content: '🔊';
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            font-size: 0.6rem;
+            opacity: 0.7;
+        }
     </style>
 </head>
 <body>
@@ -131,6 +175,98 @@
             { id: 't2', subjectId: 's1', title: 'Organização do Estado', t: false, r: 0, q: false, lastInteraction: null },
             { id: 't4', subjectId: 's2', title: 'Balanço Patrimonial', t: false, r: 0, q: false, lastInteraction: null },
         ];
+
+        // --- SISTEMA DE ÁUDIO ---
+        class SoundSystem {
+            constructor() {
+                this.audioContext = null;
+                this.isAudioEnabled = true;
+                this.initAudioContext();
+            }
+            
+            initAudioContext() {
+                try {
+                    if (window.AudioContext || window.webkitAudioContext) {
+                        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                        console.log('Sistema de áudio inicializado');
+                    }
+                } catch (e) {
+                    console.warn('Não foi possível inicializar o sistema de áudio:', e);
+                    this.isAudioEnabled = false;
+                }
+            }
+            
+            // Som de conclusão de ciclo (suave e profissional)
+            playCycleCompleteSound() {
+                if (!this.isAudioEnabled || !this.audioContext) return;
+                
+                try {
+                    const oscillator = this.audioContext.createOscillator();
+                    const gainNode = this.audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(this.audioContext.destination);
+                    
+                    // Frequências agradáveis para conclusão
+                    oscillator.frequency.setValueAtTime(523.25, this.audioContext.currentTime); // C5
+                    oscillator.frequency.setValueAtTime(659.25, this.audioContext.currentTime + 0.1); // E5
+                    oscillator.frequency.setValueAtTime(783.99, this.audioContext.currentTime + 0.2); // G5
+                    
+                    // Envelope suave
+                    gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
+                    gainNode.gain.linearRampToValueAtTime(0.2, this.audioContext.currentTime + 0.05);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.5);
+                    
+                    oscillator.start(this.audioContext.currentTime);
+                    oscillator.stop(this.audioContext.currentTime + 0.5);
+                    
+                    // Se o contexto estiver suspenso (por políticas de autoplay), tente retomar
+                    if (this.audioContext.state === 'suspended') {
+                        this.audioContext.resume();
+                    }
+                } catch (e) {
+                    console.warn('Não foi possível tocar som:', e);
+                    this.isAudioEnabled = false;
+                }
+            }
+            
+            // Som de notificação (mais discreto)
+            playNotificationSound() {
+                if (!this.isAudioEnabled || !this.audioContext) return;
+                
+                try {
+                    const oscillator = this.audioContext.createOscillator();
+                    const gainNode = this.audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(this.audioContext.destination);
+                    
+                    oscillator.frequency.setValueAtTime(880, this.audioContext.currentTime); // A5
+                    
+                    gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
+                    gainNode.gain.linearRampToValueAtTime(0.1, this.audioContext.currentTime + 0.05);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.3);
+                    
+                    oscillator.start(this.audioContext.currentTime);
+                    oscillator.stop(this.audioContext.currentTime + 0.3);
+                    
+                    if (this.audioContext.state === 'suspended') {
+                        this.audioContext.resume();
+                    }
+                } catch (e) {
+                    console.warn('Não foi possível tocar som de notificação:', e);
+                }
+            }
+            
+            // Teste do sistema de áudio
+            testSound() {
+                this.playCycleCompleteSound();
+                console.log('Teste de som realizado');
+            }
+        }
+
+        // Inicializar sistema de áudio global
+        const soundSystem = new SoundSystem();
 
         // --- COMPONENTES UI ---
         const Icon = ({ name, size = 18, className, onClick }) => {
@@ -208,24 +344,33 @@
             );
         };
 
+        // Modal responsivo atualizado
+        const Modal = ({ isOpen, title, children, onClose, responsive = false }) => {
+            if (!isOpen) return null;
+            
+            const modalClass = responsive ? "modal-responsive" : "w-full max-w-md";
+            const contentClass = responsive ? "modal-content-responsive" : "";
+            
+            return (
+                <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4 fade-in">
+                    <div className={`bg-[#FDFBF7] border-line rounded shadow-xl relative ${modalClass}`}>
+                        <div className={`p-6 md:p-8 ${contentClass}`}>
+                            <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-black">
+                                <Icon name="x" size={18}/>
+                            </button>
+                            <h3 className="font-serif font-bold text-xl mb-4 text-[#2D2D2D]">{title}</h3>
+                            {children}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         const calculateDaysLeft = (dateStr) => {
             if (!dateStr) return 0;
             const diff = new Date(dateStr) - new Date();
             const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
             return days > 0 ? days : 0;
-        };
-
-        const Modal = ({ isOpen, title, children, onClose }) => {
-            if (!isOpen) return null;
-            return (
-                <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4 fade-in">
-                    <div className="bg-[#FDFBF7] border-line p-8 rounded shadow-xl w-full max-w-md relative">
-                        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-black"><Icon name="x" size={18}/></button>
-                        <h3 className="font-serif font-bold text-xl mb-4 text-[#2D2D2D]">{title}</h3>
-                        {children}
-                    </div>
-                </div>
-            );
         };
 
         // --- ALGORITMO DE ORDENAÇÃO OTIMIZADO ---
@@ -235,30 +380,24 @@
             const now = new Date();
             const daysUntilExam = calculateDaysLeft(examDate) || 365;
             
-            // 1. Calcular prioridade baseada em múltiplos fatores
             const subjectsWithScores = subjects.map(subject => {
                 const subjectTopics = topics.filter(t => t.subjectId === subject.id);
                 const subjectSessions = sessions.filter(s => s.subjectId === subject.id);
                 
-                // Fator 1: Peso da disciplina (0.4)
                 const weightScore = subject.weight * 0.4;
                 
-                // Fator 2: Tempo desde último estudo (Curva de esquecimento - Ebbinghaus)
                 const lastSession = subjectSessions.sort((a,b) => new Date(b.date) - new Date(a.date))[0];
                 const daysSinceLastStudy = lastSession ? 
                     Math.floor((now - new Date(lastSession.date)) / (1000 * 60 * 60 * 24)) : 30;
                 
-                // Otimização: Se nunca estudou, alta prioridade
                 const recencyScore = lastSession ? 
                     Math.min(1, daysSinceLastStudy / 7) * 0.3 : 0.3;
                 
-                // Fator 3: Completude dos tópicos (0.2)
                 const totalTopics = subjectTopics.length;
                 const completedTopics = subjectTopics.filter(t => t.t && t.r >= 1 && t.q).length;
                 const completionScore = totalTopics > 0 ? 
                     (1 - (completedTopics / totalTopics)) * 0.2 : 0.2;
                 
-                // Fator 4: Desempenho histórico (0.1)
                 const avgComprehension = subjectSessions.length > 0 ?
                     subjectSessions.reduce((sum, s) => {
                         const compScore = s.comprehension === 'Alta' ? 1 : s.comprehension === 'Média' ? 0.7 : 0.4;
@@ -267,11 +406,9 @@
                 
                 const performanceScore = (1 - avgComprehension) * 0.1;
                 
-                // Fator 5: Distribuição temporal (evitar estudar mesma matéria em dias consecutivos)
                 const consecutivePenalty = subject.lastStudied && 
                     Math.floor((now - new Date(subject.lastStudied)) / (1000 * 60 * 60 * 24)) < 1 ? -0.1 : 0;
                 
-                // Score final
                 const priorityScore = weightScore + recencyScore + completionScore + performanceScore + consecutivePenalty;
                 
                 return {
@@ -283,33 +420,25 @@
                 };
             });
             
-            // 2. Ordenar por prioridade (maior score primeiro)
             const sortedByPriority = [...subjectsWithScores].sort((a, b) => b.priorityScore - a.priorityScore);
             
-            // 3. Aplicar algoritmo de espaçamento (Spaced Repetition System)
             const finalQueue = [];
             const highPriority = sortedByPriority.filter(s => s.weight >= 3);
             const mediumPriority = sortedByPriority.filter(s => s.weight === 2);
             const lowPriority = sortedByPriority.filter(s => s.weight === 1);
             
-            // Distribuir no ciclo: Alta prioridade mais frequente
             const cyclesPerWeek = Math.min(daysUntilExam, 7);
             
-            // Para ciclos curtos (até 7 dias)
             if (daysUntilExam <= 7) {
-                // Foco em matérias de maior peso
                 const weightedSubjects = [...highPriority, ...mediumPriority, ...lowPriority];
                 return weightedSubjects.slice(0, Math.min(weightedSubjects.length, daysUntilExam)).map(s => s.id);
             }
             
-            // Para ciclos mais longos, usar distribuição inteligente
             let index = 0;
             const allSubjects = [...highPriority, ...mediumPriority, ...lowPriority];
             
-            // Garantir que matérias de alto peso apareçam mais frequentemente
             for (let i = 0; i < Math.min(allSubjects.length, 10); i++) {
                 const subject = allSubjects[i];
-                // Matérias de peso 3 aparecem 2x mais que peso 1
                 const frequency = subject.weight === 3 ? 2 : subject.weight === 2 ? 1.5 : 1;
                 for (let j = 0; j < frequency; j++) {
                     if (finalQueue.length < daysUntilExam) {
@@ -318,13 +447,11 @@
                 }
             }
             
-            // Preencher com matérias restantes
             while (finalQueue.length < Math.min(daysUntilExam, allSubjects.length * 3)) {
                 finalQueue.push(allSubjects[index % allSubjects.length].id);
                 index++;
             }
             
-            // Remover duplicatas consecutivas
             const deduplicatedQueue = [];
             let lastAdded = null;
             
@@ -333,7 +460,6 @@
                     deduplicatedQueue.push(id);
                     lastAdded = id;
                 } else {
-                    // Encontrar próxima matéria diferente
                     const nextSubject = allSubjects.find(s => s.id !== id && !deduplicatedQueue.includes(s.id));
                     if (nextSubject) {
                         deduplicatedQueue.push(nextSubject.id);
@@ -344,7 +470,7 @@
                 }
             });
             
-            return deduplicatedQueue.slice(0, Math.min(daysUntilExam, 14)); // Limitar a 14 dias
+            return deduplicatedQueue.slice(0, Math.min(daysUntilExam, 14));
         };
 
         // --- MÓDULO: SELEÇÃO DE TEMPO ---
@@ -451,6 +577,9 @@
                 const overtime = Math.max(0, elapsed - plannedSec);
                 const actualExecuted = Math.min(elapsed, plannedSec); 
                 
+                // Tocar som de conclusão
+                soundSystem.playCycleCompleteSound();
+                
                 onFinish({
                     subjectId: subject.id,
                     plannedSeconds: plannedSec,
@@ -534,7 +663,7 @@
                         </div>
                     </div>
 
-                    <div className={`text-[80px] md:text-[140px] leading-none font-mono font-light tracking-tighter tabular-nums mb-4 ${isOvertime ? 'text-[#A63D40]' : 'text-[#2D2D2D]'}`}>
+                    <div className={`text-[80px] md:text-[140px] leading-none font-mono font-light tracking-tighter tabular-nums mb-4 ${isOvertime ? 'text-[#A63D40]' : 'text-[#2D2D2D]`}>
                         {isOvertime ? '+' : ''}{formatTime(displayTime)}
                     </div>
 
@@ -938,8 +1067,8 @@
             const [activeSubject, setActiveSubject] = useState(null);
             
             const [suggestionModalOpen, setSuggestionModalOpen] = useState(false);
-            const [suggestion, setSuggestion] = useState(null);
             const [showRankingModal, setShowRankingModal] = useState(false);
+            const [rankingData, setRankingData] = useState(null);
 
             // Otimizar a fila de estudos sempre que houver mudanças
             useEffect(() => {
@@ -1023,7 +1152,7 @@
                 let recommendedTopic = subjectTopics.find(t => !t.t);
                 if (!recommendedTopic) recommendedTopic = subjectTopics.sort((a,b) => (a.lastInteraction ? new Date(a.lastInteraction) : 0) - (b.lastInteraction ? new Date(b.lastInteraction) : 0))[0];
 
-                setSuggestion({
+                setRankingData({
                     subject: nextSubject.name,
                     topic: recommendedTopic ? recommendedTopic.title : "Revisão Geral",
                     reason: recommendedTopic && !recommendedTopic.t ? "Teoria pendente" : "Revisão agendada",
@@ -1036,13 +1165,18 @@
                 const rankedSubjects = optimizeStudyQueue(subjects, items, sessions, settings.examDate)
                     .map(id => subjects.find(s => s.id === id))
                     .filter(Boolean);
-                setSuggestion({
+                setRankingData({
                     subject: "Ranking de Prioridades",
                     topic: "Baseado em peso, histórico e curva de esquecimento",
                     reason: "Algoritmo otimizado para aprovação",
                     rankedList: rankedSubjects
                 });
                 setShowRankingModal(true);
+            };
+
+            // Testar sistema de som
+            const testSound = () => {
+                soundSystem.playCycleCompleteSound();
             };
 
             // Edital Actions
@@ -1210,59 +1344,66 @@
                                                 <Icon name="rotate-cw" size={14}/> {dailyStats.reviews} Revisões
                                             </span>
                                         </div>
-                                        <div>
+                                        <div className="flex items-center gap-4">
                                             <span className="flex items-center gap-2">
                                                 Tempo Líquido: {Math.floor(dailyStats.time / 60)}h {dailyStats.time % 60}m
                                             </span>
+                                            <button 
+                                                onClick={testSound}
+                                                className="text-xs font-mono text-gray-400 hover:text-[#2D2D2D] flex items-center gap-1 sound-button"
+                                                title="Testar som de conclusão"
+                                            >
+                                                <Icon name="volume-2" size={12} />
+                                            </button>
                                         </div>
                                     </footer>
                                     
                                     <Modal isOpen={suggestionModalOpen} title="Próximo Passo Recomendado" onClose={() => setSuggestionModalOpen(false)}>
-                                        {suggestion && (
+                                        {rankingData && (
                                             <div className="space-y-4">
                                                 <div className="p-4 border-line bg-white/50">
                                                     <div className="flex justify-between items-center mb-2">
                                                         <span className="text-xs font-mono text-gray-400 uppercase">Disciplina</span>
-                                                        <WeightDisplay weight={suggestion.weight} onChange={() => {}} />
+                                                        <WeightDisplay weight={rankingData.weight} onChange={() => {}} />
                                                     </div>
-                                                    <p className="text-lg font-bold font-serif text-[#2D2D2D]">{suggestion.subject}</p>
+                                                    <p className="text-lg font-bold font-serif text-[#2D2D2D]">{rankingData.subject}</p>
                                                 </div>
                                                 <div className="p-4 border-line bg-white/50">
                                                     <span className="text-xs font-mono text-gray-400 uppercase">Tópico</span>
-                                                    <p className="text-lg font-serif text-gray-700">{suggestion.topic}</p>
+                                                    <p className="text-lg font-serif text-gray-700">{rankingData.topic}</p>
                                                 </div>
                                                 <div className="p-4 bg-[#E3D5CA]/20 border border-[#E3D5CA] rounded">
                                                     <span className="text-xs font-mono text-gray-500 uppercase">Por que?</span>
-                                                    <p className="text-sm font-serif italic text-gray-600">{suggestion.reason}</p>
+                                                    <p className="text-sm font-serif italic text-gray-600">{rankingData.reason}</p>
                                                 </div>
-                                                <button onClick={() => { setSuggestionModalOpen(false); handlePlay(subjects.find(s => s.name === suggestion.subject)); }} className="w-full bg-[#2D2D2D] text-[#FDFBF7] py-3 font-mono text-xs uppercase tracking-widest hover:bg-black">
+                                                <button onClick={() => { setSuggestionModalOpen(false); handlePlay(subjects.find(s => s.name === rankingData.subject)); }} className="w-full bg-[#2D2D2D] text-[#FDFBF7] py-3 font-mono text-xs uppercase tracking-widest hover:bg-black">
                                                     Iniciar Agora
                                                 </button>
                                             </div>
                                         )}
                                     </Modal>
 
-                                    <Modal isOpen={showRankingModal} title="Ranking de Prioridades" onClose={() => setShowRankingModal(false)}>
-                                        {suggestion && suggestion.rankedList && (
+                                    <Modal isOpen={showRankingModal} title="Ranking de Prioridades" onClose={() => setShowRankingModal(false)} responsive={true}>
+                                        {rankingData && rankingData.rankedList && (
                                             <div className="space-y-4">
                                                 <div className="p-4 bg-[#FDFBF7] border-line rounded">
                                                     <p className="text-sm font-serif text-gray-600 mb-4">
                                                         Ordem otimizada baseada em: <strong>Peso da disciplina</strong>, 
-                                                        <strong>Curva de Esquecimento (Ebbinghaus)</strong>, 
-                                                        <strong>Completude dos tópicos</strong> e 
-                                                        <strong>Desempenho histórico</strong>.
+                                                        <strong> Curva de Esquecimento (Ebbinghaus)</strong>, 
+                                                        <strong> Completude dos tópicos</strong> e 
+                                                        <strong> Desempenho histórico</strong>.
                                                     </p>
                                                     
-                                                    <div className="space-y-3">
-                                                        {suggestion.rankedList.map((subject, index) => {
+                                                    <div className="space-y-3 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+                                                        {rankingData.rankedList.map((subject, index) => {
                                                             const weightClass = subject.weight >= 3 ? 'weight-high' : 
                                                                                subject.weight === 2 ? 'weight-medium' : 'weight-low';
                                                             const weightLabel = subject.weight >= 3 ? 'Alta' : 
                                                                                subject.weight === 2 ? 'Média' : 'Baixa';
                                                             
                                                             return (
-                                                                <div key={subject.id} className="flex items-center justify-between p-3 border-line rounded hover:bg-gray-50 transition-colors">
-                                                                    <div className="flex items-center gap-3">
+                                                                <div key={subject.id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 border-line rounded hover:bg-gray-50 transition-colors ${index < 3 ? 'ranking-item-responsive' : ''}`}>
+                                                                    <div className="flex items-center gap-3 mb-2 sm:mb-0">
                                                                         <div className={`w-8 h-8 rounded-full flex items-center justify-center font-mono text-sm font-bold 
                                                                             ${index === 0 ? 'bg-[#2D2D2D] text-white' : 
                                                                               index === 1 ? 'bg-gray-300 text-gray-700' : 
@@ -1270,14 +1411,14 @@
                                                                               'bg-gray-100 text-gray-500'}`}>
                                                                             {index + 1}
                                                                         </div>
-                                                                        <div>
-                                                                            <p className="font-serif font-medium">{subject.name}</p>
-                                                                            <div className="flex items-center gap-2 mt-1">
-                                                                                <span className={`weight-badge ${weightClass} text-xs`}>
+                                                                        <div className="flex-1 min-w-0">
+                                                                            <p className="font-serif font-medium truncate">{subject.name}</p>
+                                                                            <div className="flex flex-wrap items-center gap-2 mt-1 ranking-info-responsive">
+                                                                                <span className={`weight-badge ${weightClass} text-xs flex-shrink-0`}>
                                                                                     Peso: {weightLabel}
                                                                                 </span>
                                                                                 {subject.priorityScore && (
-                                                                                    <span className="text-xs font-mono text-gray-500">
+                                                                                    <span className="text-xs font-mono text-gray-500 flex-shrink-0">
                                                                                         Score: {subject.priorityScore.toFixed(2)}
                                                                                     </span>
                                                                                 )}
@@ -1285,7 +1426,7 @@
                                                                         </div>
                                                                     </div>
                                                                     {index === 0 && (
-                                                                        <span className="text-xs font-mono text-[#A63D40] animate-pulse">
+                                                                        <span className="text-xs font-mono text-[#A63D40] animate-pulse sm:self-center">
                                                                             AGORA
                                                                         </span>
                                                                     )}
@@ -1295,9 +1436,15 @@
                                                     </div>
                                                 </div>
                                                 
-                                                <button onClick={() => setShowRankingModal(false)} className="w-full border-line py-3 font-mono text-xs uppercase tracking-widest hover:bg-gray-100">
-                                                    Fechar
-                                                </button>
+                                                <div className="flex gap-3">
+                                                    <button onClick={testSound} className="flex-1 border-line py-3 font-mono text-xs uppercase tracking-widest hover:bg-gray-100 flex items-center justify-center gap-2">
+                                                        <Icon name="volume-2" size={12} />
+                                                        Testar Som
+                                                    </button>
+                                                    <button onClick={() => setShowRankingModal(false)} className="flex-1 bg-[#2D2D2D] text-[#FDFBF7] py-3 font-mono text-xs uppercase tracking-widest hover:bg-black">
+                                                        Fechar
+                                                    </button>
+                                                </div>
                                             </div>
                                         )}
                                     </Modal>
@@ -1331,7 +1478,6 @@
             const [user, setUser] = useState(null);
             const [activePlan, setActivePlan] = useState(null);
 
-            // Recupera usuário ao recarregar a página
             useEffect(() => {
                 const savedUser = localStorage.getItem('study_user');
                 if (savedUser) setUser(JSON.parse(savedUser));
