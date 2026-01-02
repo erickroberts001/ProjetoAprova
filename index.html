@@ -2,16 +2,24 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Estudo de Alta Performance 2 </title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Estudo de Alta Performance</title>
     
-    <!-- React & ReactDOM -->
-    <script crossorigin src="https://unpkg.com/react@17/umd/react.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+    <!-- Evita erro de favicon 404 no console -->
+    <link rel="icon" href="data:,">
+
+    <!-- React & ReactDOM (Versões Fixas para Estabilidade) -->
+    <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel Standalone (Para compilar JSX no navegador) -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -32,9 +40,8 @@
             background-color: var(--bg-paper);
             color: var(--ink-main);
             font-family: 'Merriweather', serif;
-            margin: 0;
-            padding: 0;
-            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
         }
 
         .font-mono { font-family: 'JetBrains Mono', monospace; }
@@ -67,99 +74,28 @@
             font-weight: bold;
         }
         
+        .strikethrough { text-decoration: line-through; color: var(--ink-faded); }
+
         .fade-in { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
         .hide-scroll::-webkit-scrollbar { display: none; }
         .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
-
-        .paper-grid {
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
-            opacity: 0.03;
-            background-image: linear-gradient(var(--ink-main) 1px, transparent 1px);
-            background-size: 100% 2rem;
-            z-index: 0;
-        }
-
-        .modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.2);
-            backdrop-filter: blur(4px);
-            z-index: 100;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 1rem;
-        }
-
-        .modal-content {
-            background: var(--bg-paper);
-            border: 1px solid var(--lines);
-            border-radius: 4px;
-            padding: 2rem;
-            max-width: 500px;
-            width: 100%;
-            position: relative;
-        }
-
-        .btn-primary {
-            background: var(--ink-main);
-            color: var(--bg-paper);
-            border: none;
-            padding: 0.75rem 1.5rem;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .btn-primary:hover {
-            background: black;
-        }
-
-        .btn-secondary {
-            background: transparent;
-            color: var(--ink-main);
-            border: 1px solid var(--lines);
-            padding: 0.75rem 1.5rem;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-secondary:hover {
-            border-color: var(--ink-main);
-        }
-
-        .icon-btn {
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--ink-faded);
-        }
-
-        .icon-btn:hover {
-            color: var(--ink-main);
-        }
+        
+        /* Ajuste para scrollbars personalizadas */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #E0E0E0; border-radius: 3px; }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
-    <script type="text/babel">
-        // Dados iniciais
+    <!-- Adicionado data-presets para garantir compilação correta -->
+    <script type="text/babel" data-presets="env,react">
+        const { useState, useEffect, useMemo, useRef } = React;
+
+        // --- DADOS PADRÃO ---
         const INITIAL_SUBJECTS = [
             { id: 's1', name: 'Direito Constitucional', weight: 3 },
             { id: 's2', name: 'Contabilidade Geral', weight: 2 },
@@ -173,674 +109,865 @@
             { id: 't4', subjectId: 's2', title: 'Balanço Patrimonial', t: false, r: 0, q: false, lastInteraction: null },
         ];
 
-        // Componente Icon simplificado
-        class Icon extends React.Component {
-            render() {
-                return React.createElement('i', {
-                    className: this.props.className || '',
-                    onClick: this.props.onClick,
-                    style: {
-                        width: this.props.size || 18,
-                        height: this.props.size || 18,
-                        display: 'inline-block',
-                        ...this.props.style
-                    },
-                    dangerouslySetInnerHTML: this.getIconSVG()
-                });
-            }
+        // --- COMPONENTES UI ---
+        const Icon = ({ name, size = 18, className, onClick }) => {
+            // Refatorado para garantir que o Lucide encontre o elemento
+            const iconRef = useRef(null);
+            
+            useEffect(() => { 
+                if (window.lucide && iconRef.current) {
+                    window.lucide.createIcons({
+                        root: iconRef.current,
+                        nameAttr: 'data-lucide',
+                        attrs: {
+                            class: className,
+                            width: size,
+                            height: size,
+                            strokeWidth: "1.5"
+                        }
+                    });
+                } 
+            }, [name, size, className]);
 
-            getIconSVG() {
-                const icons = {
-                    'x': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>',
-                    'arrow-left': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>',
-                    'layout': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>',
-                    'list-tree': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12h-8"></path><path d="M21 6H8"></path><path d="M21 18h-8"></path><path d="M3 6v4c0 1.1.9 2 2 2h3"></path><path d="M3 10v6c0 1.1.9 2 2 2h3"></path></svg>',
-                    'bar-chart-2': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>',
-                    'play': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>',
-                    'skip-forward': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>',
-                    'lightbulb': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M15.09 14c.18-.98.33-2.05.33-3 0-4.42-3.58-8-8-8S0 6.58 0 11c0 2.05.78 4.1 2 5.65"></path><path d="M18 11.37c1.22-.84 2-2.17 2-3.65 0-2.76-2.24-5-5-5-1.9 0-3.51 1.06-4.35 2.62"></path></svg>',
-                    'check-circle': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>',
-                    'rotate-cw': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>',
-                    'pencil': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>',
-                    'trash-2': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>',
-                    'plus': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>',
-                    'book-open': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>'
-                };
-                return { __html: icons[this.props.name] || icons['x'] };
-            }
-        }
+            return (
+                <span ref={iconRef} onClick={onClick} className="inline-flex items-center justify-center cursor-pointer">
+                    <i data-lucide={name}></i>
+                </span>
+            );
+        };
 
-        // Funções utilitárias
-        function calculateDaysLeft(dateStr) {
+        const calculateDaysLeft = (dateStr) => {
             if (!dateStr) return 0;
             const diff = new Date(dateStr) - new Date();
-            return Math.ceil(diff / (1000 * 60 * 60 * 24));
-        }
+            const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+            return days > 0 ? days : 0;
+        };
 
-        function formatTime(seconds) {
-            const absSeconds = Math.abs(seconds);
-            const m = Math.floor(absSeconds / 60).toString().padStart(2, '0');
-            const s = (absSeconds % 60).toString().padStart(2, '0');
-            return `${seconds < 0 ? '+' : ''}${m}:${s}`;
-        }
+        const Modal = ({ isOpen, title, children, onClose }) => {
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4 fade-in">
+                    <div className="bg-[#FDFBF7] border-line p-8 rounded shadow-xl w-full max-w-md relative">
+                        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-black"><Icon name="x" size={18}/></button>
+                        <h3 className="font-serif font-bold text-xl mb-4 text-[#2D2D2D]">{title}</h3>
+                        {children}
+                    </div>
+                </div>
+            );
+        };
 
-        // Modal Component
-        class Modal extends React.Component {
-            render() {
-                if (!this.props.isOpen) return null;
-                
-                return React.createElement('div', {
-                    className: 'modal-overlay fade-in'
-                },
-                    React.createElement('div', {
-                        className: 'modal-content'
-                    },
-                        React.createElement('button', {
-                            className: 'icon-btn absolute top-4 right-4',
-                            onClick: this.props.onClose
-                        }, React.createElement(Icon, { name: 'x', size: 18 })),
-                        React.createElement('h3', {
-                            className: 'font-serif font-bold text-xl mb-4 text-[#2D2D2D]'
-                        }, this.props.title),
-                        this.props.children
-                    )
-                );
-            }
-        }
+        // --- MÓDULO: SELEÇÃO DE TEMPO ---
+        const TimeSelector = ({ onSelect }) => (
+            <div className="flex flex-col items-center justify-center h-full fade-in">
+                <h3 className="text-xl font-serif mb-8 text-gray-500 italic">Tempo disponível para esta sessão:</h3>
+                <div className="flex gap-6">
+                    {[25, 35, 50].map(min => (
+                        <button 
+                            key={min}
+                            onClick={() => onSelect(min)}
+                            className="w-24 h-24 rounded-full border-line hover:border-[#2D2D2D] hover:bg-[#E3D5CA] transition-all flex flex-col items-center justify-center group"
+                        >
+                            <span className="text-2xl font-mono font-bold text-[#2D2D2D]">{min}</span>
+                            <span className="text-[10px] uppercase tracking-widest text-gray-400 group-hover:text-[#2D2D2D]">Min</span>
+                        </button>
+                    ))}
+                </div>
+            </div>
+        );
 
-        // Time Selector
-        class TimeSelector extends React.Component {
-            render() {
-                return React.createElement('div', {
-                    className: 'flex flex-col items-center justify-center h-full fade-in'
-                },
-                    React.createElement('h3', {
-                        className: 'text-xl font-serif mb-8 text-gray-500 italic'
-                    }, 'Tempo disponível para esta sessão:'),
-                    React.createElement('div', { className: 'flex gap-6' },
-                        [25, 35, 50].map(min => 
-                            React.createElement('button', {
-                                key: min,
-                                onClick: () => this.props.onSelect(min),
-                                className: 'w-24 h-24 rounded-full border-line hover:border-[#2D2D2D] hover:bg-[#E3D5CA] transition-all flex flex-col items-center justify-center group'
-                            },
-                                React.createElement('span', {
-                                    className: 'text-2xl font-mono font-bold text-[#2D2D2D]'
-                                }, min),
-                                React.createElement('span', {
-                                    className: 'text-[10px] uppercase tracking-widest text-gray-400 group-hover:text-[#2D2D2D]'
-                                }, 'Min')
-                            )
-                        )
-                    )
-                );
-            }
-        }
+        // --- MÓDULO: POMODORO ---
+        const Pomodoro = ({ subject, onFinish, onCancel }) => {
+            const [mode, setMode] = useState('setup'); 
+            const [plannedMinutes, setPlannedMinutes] = useState(0);
+            const [startTime, setStartTime] = useState(null);
+            const [elapsed, setElapsed] = useState(0); 
+            const [isRunning, setIsRunning] = useState(false);
+            
+            const [comprehension, setComprehension] = useState(null); 
+            const [questionsCount, setQuestionsCount] = useState('');
+            const [notes, setNotes] = useState('');
 
-        // Pomodoro Timer
-        class Pomodoro extends React.Component {
-            constructor(props) {
-                super(props);
-                this.state = {
-                    mode: 'setup',
-                    plannedMinutes: 0,
-                    startTime: null,
-                    elapsed: 0,
-                    isRunning: false,
-                    comprehension: null,
-                    questionsCount: '',
-                    notes: ''
-                };
-                this.timerInterval = null;
-            }
-
-            componentDidMount() {
+            // Resiliência
+            useEffect(() => {
                 const savedState = localStorage.getItem('timer_state');
                 if (savedState) {
-                    const state = JSON.parse(savedState);
-                    if (state.subjectId === this.props.subject.id && (Date.now() - state.timestamp < 43200000)) {
-                        this.setState({
-                            plannedMinutes: state.plannedMinutes,
-                            startTime: state.startTime,
-                            elapsed: state.isRunning ? state.elapsed + Math.floor((Date.now() - state.lastSave) / 1000) : state.elapsed,
-                            isRunning: state.isRunning,
-                            mode: 'running'
-                        });
-                        if (state.isRunning) {
-                            this.startTimer();
+                    try {
+                        const state = JSON.parse(savedState);
+                        // Recupera apenas se for recente (menos de 12h) e do mesmo assunto
+                        if (state.subjectId === subject.id && (Date.now() - state.timestamp < 43200000)) {
+                            setPlannedMinutes(state.plannedMinutes);
+                            setStartTime(state.startTime);
+                            if (state.isRunning) {
+                                const now = Date.now();
+                                const diffSeconds = Math.floor((now - state.lastSave) / 1000);
+                                setElapsed(state.elapsed + diffSeconds);
+                            } else {
+                                setElapsed(state.elapsed);
+                            }
+                            setIsRunning(state.isRunning);
+                            setMode('running');
                         }
-                    }
+                    } catch (e) { console.error("Erro ao recuperar timer", e); }
                 }
-            }
+            }, [subject.id]);
 
-            componentDidUpdate(prevProps, prevState) {
-                if (this.state.isRunning && !prevState.isRunning) {
-                    this.startTimer();
-                } else if (!this.state.isRunning && prevState.isRunning) {
-                    this.stopTimer();
+            useEffect(() => {
+                let interval = null;
+                if (isRunning && mode === 'running') {
+                    interval = setInterval(() => {
+                        setElapsed(prev => {
+                            const newElapsed = prev + 1;
+                            localStorage.setItem('timer_state', JSON.stringify({
+                                subjectId: subject.id,
+                                plannedMinutes,
+                                startTime: startTime || Date.now(),
+                                elapsed: newElapsed,
+                                isRunning: true,
+                                lastSave: Date.now(),
+                                timestamp: Date.now()
+                            }));
+                            return newElapsed;
+                        });
+                    }, 1000);
+                } else if (mode === 'running') {
+                    localStorage.setItem('timer_state', JSON.stringify({
+                        subjectId: subject.id,
+                        plannedMinutes,
+                        startTime,
+                        elapsed,
+                        isRunning: false,
+                        lastSave: Date.now(),
+                        timestamp: Date.now()
+                    }));
                 }
-            }
+                return () => clearInterval(interval);
+            }, [isRunning, mode, plannedMinutes, startTime, subject.id, elapsed]);
 
-            componentWillUnmount() {
-                this.stopTimer();
-            }
+            const handleStart = (mins) => {
+                setPlannedMinutes(mins);
+                setStartTime(Date.now());
+                setElapsed(0);
+                setIsRunning(true);
+                setMode('running');
+            };
 
-            startTimer() {
-                this.timerInterval = setInterval(() => {
-                    this.setState(prevState => {
-                        const newElapsed = prevState.elapsed + 1;
-                        localStorage.setItem('timer_state', JSON.stringify({
-                            subjectId: this.props.subject.id,
-                            plannedMinutes: prevState.plannedMinutes,
-                            startTime: prevState.startTime || Date.now(),
-                            elapsed: newElapsed,
-                            isRunning: true,
-                            lastSave: Date.now(),
-                            timestamp: Date.now()
-                        }));
-                        return { elapsed: newElapsed };
-                    });
-                }, 1000);
-            }
+            const handleEndSession = () => {
+                setIsRunning(false);
+                setMode('feedback');
+                localStorage.removeItem('timer_state'); 
+            };
 
-            stopTimer() {
-                if (this.timerInterval) {
-                    clearInterval(this.timerInterval);
-                    this.timerInterval = null;
-                }
-            }
-
-            handleStart = (mins) => {
-                this.setState({
-                    plannedMinutes: mins,
-                    startTime: Date.now(),
-                    elapsed: 0,
-                    isRunning: true,
-                    mode: 'running'
-                });
-            }
-
-            handleEndSession = () => {
-                this.setState({ isRunning: false, mode: 'feedback' });
-                localStorage.removeItem('timer_state');
-                this.stopTimer();
-            }
-
-            submitSession = () => {
-                const plannedSec = this.state.plannedMinutes * 60;
-                const overtime = Math.max(0, this.state.elapsed - plannedSec);
-                const actualExecuted = Math.min(this.state.elapsed, plannedSec);
+            const submitSession = () => {
+                const plannedSec = plannedMinutes * 60;
+                const overtime = Math.max(0, elapsed - plannedSec);
+                const actualExecuted = Math.min(elapsed, plannedSec); 
                 
-                this.props.onFinish({
-                    subjectId: this.props.subject.id,
+                onFinish({
+                    subjectId: subject.id,
                     plannedSeconds: plannedSec,
                     executedSeconds: actualExecuted,
                     overtimeSeconds: overtime,
-                    questions: parseInt(this.state.questionsCount) || 0,
-                    comprehension: this.state.comprehension,
-                    notes: this.state.notes
+                    questions: parseInt(questionsCount) || 0,
+                    comprehension,
+                    notes
                 });
-            }
+            };
 
-            renderSetup() {
-                return React.createElement(TimeSelector, { onSelect: this.handleStart });
-            }
+            if (mode === 'setup') return <TimeSelector onSelect={handleStart} />;
 
-            renderFeedback() {
-                return React.createElement('div', {
-                    className: 'h-full flex flex-col justify-center items-center fade-in max-w-md mx-auto'
-                },
-                    React.createElement('h2', {
-                        className: 'text-2xl font-serif mb-6'
-                    }, 'Registro da Sessão'),
-                    React.createElement('div', { className: 'w-full space-y-6' },
-                        React.createElement('div', null,
-                            React.createElement('label', {
-                                className: 'block text-xs font-mono uppercase tracking-widest text-gray-500 mb-3'
-                            }, 'Nível de Compreensão'),
-                            React.createElement('div', { className: 'flex justify-between gap-4' },
-                                ['Baixa', 'Média', 'Alta'].map(level =>
-                                    React.createElement('button', {
-                                        key: level,
-                                        onClick: () => this.setState({ comprehension: level }),
-                                        className: `flex-1 py-3 border-line text-sm font-mono transition-all ${this.state.comprehension === level ? 'bg-[#2D2D2D] text-white' : 'hover:border-[#2D2D2D]'}`
-                                    }, level)
-                                )
-                            )
-                        ),
-                        React.createElement('div', null,
-                            React.createElement('label', {
-                                className: 'block text-xs font-mono uppercase tracking-widest text-gray-500 mb-2'
-                            }, 'Questões Realizadas'),
-                            React.createElement('input', {
-                                type: 'number',
-                                className: 'w-full bg-transparent border-b-line p-2 font-mono text-lg focus:border-[#2D2D2D]',
-                                placeholder: '0',
-                                value: this.state.questionsCount,
-                                onChange: e => this.setState({ questionsCount: e.target.value })
-                            })
-                        ),
-                        React.createElement('div', null,
-                            React.createElement('label', {
-                                className: 'block text-xs font-mono uppercase tracking-widest text-gray-500 mb-2'
-                            }, 'Notas Rápidas (Salvas no Histórico)'),
-                            React.createElement('textarea', {
-                                className: 'w-full bg-transparent border-line p-3 font-serif text-sm h-24 resize-none focus:border-[#2D2D2D]',
-                                placeholder: 'O que fixar? O que revisar?',
-                                value: this.state.notes,
-                                onChange: e => this.setState({ notes: e.target.value })
-                            })
-                        ),
-                        React.createElement('button', {
-                            onClick: this.submitSession,
-                            disabled: !this.state.comprehension,
-                            className: 'btn-primary w-full disabled:opacity-50'
-                        }, 'Salvar & Continuar')
-                    )
+            if (mode === 'feedback') {
+                return (
+                    <div className="h-full flex flex-col justify-center items-center fade-in max-w-md mx-auto w-full">
+                        <h2 className="text-2xl font-serif mb-6">Registro da Sessão</h2>
+                        <div className="w-full space-y-6">
+                            <div>
+                                <label className="block text-xs font-mono uppercase tracking-widest text-gray-500 mb-3">Nível de Compreensão</label>
+                                <div className="flex justify-between gap-4">
+                                    {['Baixa', 'Média', 'Alta'].map((level) => (
+                                        <button 
+                                            key={level}
+                                            onClick={() => setComprehension(level)}
+                                            className={`flex-1 py-3 border-line text-sm font-mono transition-all ${comprehension === level ? 'bg-[#2D2D2D] text-white' : 'hover:border-[#2D2D2D]'}`}
+                                        >
+                                            {level}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-mono uppercase tracking-widest text-gray-500 mb-2">Questões Realizadas</label>
+                                <input 
+                                    type="number"
+                                    className="w-full bg-transparent border-b-line p-2 font-mono text-lg focus:border-[#2D2D2D]"
+                                    placeholder="0"
+                                    value={questionsCount}
+                                    onChange={e => setQuestionsCount(e.target.value)}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-mono uppercase tracking-widest text-gray-500 mb-2">Notas Rápidas (Salvas no Histórico)</label>
+                                <textarea 
+                                    className="w-full bg-transparent border-line p-3 font-serif text-sm h-24 resize-none focus:border-[#2D2D2D]"
+                                    placeholder="O que fixar? O que revisar?"
+                                    value={notes}
+                                    onChange={e => setNotes(e.target.value)}
+                                ></textarea>
+                            </div>
+                            <button onClick={submitSession} disabled={!comprehension} className="w-full bg-[#2D2D2D] text-[#FDFBF7] py-4 font-mono uppercase tracking-widest text-sm hover:bg-black disabled:opacity-50 transition-colors">
+                                Salvar & Continuar
+                            </button>
+                        </div>
+                    </div>
                 );
             }
 
-            renderRunning() {
-                const plannedSeconds = this.state.plannedMinutes * 60;
-                const isOvertime = this.state.elapsed > plannedSeconds;
-                const displayTime = isOvertime ? this.state.elapsed - plannedSeconds : plannedSeconds - this.state.elapsed;
+            const plannedSeconds = plannedMinutes * 60;
+            const isOvertime = elapsed > plannedSeconds;
+            const displayTime = isOvertime ? elapsed - plannedSeconds : plannedSeconds - elapsed;
+            
+            const formatTime = (s) => {
+                const m = Math.floor(s / 60).toString().padStart(2, '0');
+                const sec = (s % 60).toString().padStart(2, '0');
+                return `${m}:${sec}`;
+            };
 
-                return React.createElement('div', {
-                    className: 'h-full flex flex-col items-center justify-center fade-in relative'
-                },
-                    React.createElement('button', {
-                        onClick: this.props.onCancel,
-                        className: 'absolute top-0 left-0 text-xs font-mono text-gray-400 hover:text-[#2D2D2D] flex items-center gap-2'
-                    },
-                        React.createElement(Icon, { name: 'arrow-left', size: 14 }),
-                        ' VOLTAR'
-                    ),
-                    React.createElement('div', { className: 'text-center mb-8' },
-                        React.createElement('span', {
-                            className: 'text-xs font-mono text-gray-400 uppercase tracking-widest block mb-2'
-                        }, 'Focando em'),
-                        React.createElement('h2', {
-                            className: 'text-3xl font-bold font-serif max-w-lg leading-tight'
-                        }, this.props.subject.name)
-                    ),
-                    React.createElement('div', {
-                        className: `text-[100px] md:text-[140px] leading-none font-mono font-light tracking-tighter tabular-nums mb-4 ${isOvertime ? 'text-[#A63D40]' : 'text-[#2D2D2D]'}`
-                    }, formatTime(displayTime)),
-                    isOvertime && React.createElement('div', { className: 'text-center mb-8' },
-                        React.createElement('span', {
-                            className: 'text-[#A63D40] font-mono text-xs uppercase tracking-widest animate-pulse block'
-                        }, 'Tempo Extra (Overrun)'),
-                        React.createElement('span', {
-                            className: 'text-gray-400 font-mono text-[10px]'
-                        }, 'Contando separadamente do planejado')
-                    ),
-                    React.createElement('div', { className: 'flex gap-4 mt-8' },
-                        React.createElement('button', {
-                            onClick: () => this.setState({ isRunning: !this.state.isRunning }),
-                            className: 'btn-secondary w-32'
-                        }, this.state.isRunning ? 'Pausar' : 'Retomar'),
-                        React.createElement('button', {
-                            onClick: this.handleEndSession,
-                            className: 'btn-primary w-32'
-                        }, 'Encerrar')
-                    )
-                );
-            }
+            return (
+                <div className="h-full flex flex-col items-center justify-center fade-in relative w-full">
+                    <button onClick={onCancel} className="absolute top-0 left-0 text-xs font-mono text-gray-400 hover:text-[#2D2D2D] flex items-center gap-2">
+                        <Icon name="arrow-left" size={14} /> VOLTAR
+                    </button>
 
-            render() {
-                switch(this.state.mode) {
-                    case 'setup':
-                        return this.renderSetup();
-                    case 'feedback':
-                        return this.renderFeedback();
-                    case 'running':
-                        return this.renderRunning();
-                    default:
-                        return this.renderSetup();
-                }
-            }
-        }
+                    <div className="text-center mb-8">
+                        <span className="text-xs font-mono text-gray-400 uppercase tracking-widest block mb-2">Focando em</span>
+                        <h2 className="text-2xl md:text-3xl font-bold font-serif max-w-lg leading-tight px-4">{subject.name}</h2>
+                    </div>
 
-        // Auth Screen
-        class AuthScreen extends React.Component {
-            constructor(props) {
-                super(props);
-                this.state = {
-                    isRegister: false,
-                    username: '',
-                    password: '',
-                    error: ''
-                };
-            }
+                    <div className={`text-[80px] md:text-[140px] leading-none font-mono font-light tracking-tighter tabular-nums mb-4 ${isOvertime ? 'text-[#A63D40]' : 'text-[#2D2D2D]'}`}>
+                        {isOvertime ? '+' : ''}{formatTime(displayTime)}
+                    </div>
 
-            handleSubmit = (e) => {
-                e.preventDefault();
-                this.setState({ error: '' });
+                    {isOvertime && (
+                        <div className="text-center mb-8">
+                            <span className="text-[#A63D40] font-mono text-xs uppercase tracking-widest animate-pulse block">Tempo Extra (Overrun)</span>
+                            <span className="text-gray-400 font-mono text-[10px]">Contando separadamente do planejado</span>
+                        </div>
+                    )}
+
+                    <div className="flex gap-4 mt-8">
+                        <button onClick={() => setIsRunning(!isRunning)} className="w-32 py-3 border-line font-mono text-sm uppercase tracking-widest hover:border-[#2D2D2D] transition-colors">
+                            {isRunning ? 'Pausar' : 'Retomar'}
+                        </button>
+                        <button onClick={handleEndSession} className="w-32 py-3 bg-[#2D2D2D] text-[#FDFBF7] font-mono text-sm uppercase tracking-widest hover:bg-black transition-colors">
+                            Encerrar
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- MÓDULO: DADOS ---
+        const DataAnalytics = ({ sessions, subjects }) => {
+            const stats = useMemo(() => {
+                const totalSeconds = sessions.reduce((acc, s) => acc + s.executedSeconds, 0);
+                const plannedSeconds = sessions.reduce((acc, s) => acc + s.plannedSeconds, 0);
+                const overtimeSeconds = sessions.reduce((acc, s) => acc + (s.overtimeSeconds || 0), 0);
+                const totalQuestions = sessions.reduce((acc, s) => acc + (s.questions || 0), 0);
                 
-                if (!this.state.username || !this.state.password) {
-                    this.setState({ error: 'Preencha todos os campos' });
-                    return;
+                const bySubject = subjects.map(sub => {
+                    const subSessions = sessions.filter(s => s.subjectId === sub.id);
+                    const time = subSessions.reduce((acc, s) => acc + s.executedSeconds, 0);
+                    return { name: sub.name, time, timeH: (time/3600).toFixed(1) };
+                }).filter(s => s.time > 0).sort((a,b) => b.time - a.time);
+
+                // Notas - Filtra sessões com notas
+                const sessionNotes = sessions.filter(s => s.notes && s.notes.trim() !== "").sort((a,b) => b.id - a.id);
+
+                return { totalSeconds, plannedSeconds, overtimeSeconds, bySubject, totalQuestions, sessionNotes };
+            }, [sessions, subjects]);
+
+            const formatH = (s) => (s / 3600).toFixed(1) + 'h';
+            const maxTime = stats.bySubject.length > 0 ? stats.bySubject[0].time : 1;
+
+            return (
+                <div className="fade-in max-w-4xl mx-auto pb-12 w-full">
+                    <header className="mb-12 pt-4 flex justify-between items-end">
+                        <h1 className="text-3xl font-serif font-bold">Relatório de Dados</h1>
+                    </header>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+                        <div className="border-line p-4 bg-white/50">
+                            <span className="text-[10px] font-mono text-gray-400 uppercase tracking-widest block mb-1">Total</span>
+                            <span className="text-2xl font-serif text-[#2D2D2D]">{formatH(stats.totalSeconds)}</span>
+                        </div>
+                        <div className="border-line p-4 bg-white/50">
+                            <span className="text-[10px] font-mono text-gray-400 uppercase tracking-widest block mb-1">Questões</span>
+                            <span className="text-2xl font-serif text-[#2D2D2D]">{stats.totalQuestions}</span>
+                        </div>
+                        <div className="border-line p-4 bg-white/50">
+                            <span className="text-[10px] font-mono text-gray-400 uppercase tracking-widest block mb-1">Planejado</span>
+                            <span className="text-2xl font-serif text-gray-600">{formatH(stats.plannedSeconds)}</span>
+                        </div>
+                        <div className="border-line p-4 bg-white/50">
+                            <span className="text-[10px] font-mono text-gray-400 uppercase tracking-widest block mb-1">Extra</span>
+                            <span className="text-2xl font-serif text-[#A63D40]">{formatH(stats.overtimeSeconds)}</span>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                        <div>
+                            <h3 className="text-sm font-mono text-gray-400 uppercase tracking-widest mb-6">Distribuição por Disciplina</h3>
+                            <div className="space-y-4 mb-8">
+                                {stats.bySubject.map((item, index) => (
+                                    <div key={index} className="flex flex-col gap-1">
+                                        <div className="flex justify-between items-end mb-1">
+                                            <span className="text-sm font-serif text-[#2D2D2D]">{item.name}</span>
+                                            <span className="text-xs font-mono text-gray-500">{formatH(item.time)}</span>
+                                        </div>
+                                        <div className="w-full bg-[#E0E0E0] h-2 rounded-sm overflow-hidden">
+                                            <div 
+                                                className="bg-[#2D2D2D] h-full rounded-sm transition-all duration-500" 
+                                                style={{ width: `${(item.time / maxTime) * 100}%` }}
+                                            ></div>
+                                        </div>
+                                    </div>
+                                ))}
+                                {stats.bySubject.length === 0 && (
+                                    <div className="text-center p-8 border-line border-dashed text-gray-400 text-sm font-serif italic">Nenhum dado registrado.</div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 className="text-sm font-mono text-gray-400 uppercase tracking-widest mb-6">Caderno de Notas</h3>
+                            <div className="space-y-4 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+                                {stats.sessionNotes.map((note) => {
+                                    const subjectName = subjects.find(s => s.id === note.subjectId)?.name || 'Disciplina Desconhecida';
+                                    return (
+                                        <div key={note.id} className="border-b-line pb-4 mb-4 last:border-0 last:mb-0">
+                                            <div className="flex justify-between items-baseline mb-2">
+                                                <span className="text-xs font-mono text-gray-500">{new Date(note.date).toLocaleDateString()}</span>
+                                                <span className="text-[10px] font-mono text-[#2D2D2D] bg-[#E3D5CA] px-2 py-0.5 rounded uppercase">{note.comprehension}</span>
+                                            </div>
+                                            <p className="text-xs font-bold font-serif text-[#2D2D2D] mb-1">{subjectName}</p>
+                                            <p className="text-sm font-serif text-gray-600 italic leading-relaxed">"{note.notes}"</p>
+                                        </div>
+                                    );
+                                })}
+                                {stats.sessionNotes.length === 0 && (
+                                    <div className="text-center p-8 border-line border-dashed text-gray-400 text-sm font-serif italic">Nenhuma nota registrada.</div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- MÓDULO: EDITAL ---
+        const Syllabus = ({ subjects, topics, onAddSubject, onAddTopic, onUpdateSubject, onUpdateTopic, onDeleteSubject, onDeleteTopic, onToggleTopic }) => {
+            const [editingId, setEditingId] = useState(null);
+            const [editValue, setEditValue] = useState('');
+            const [newSubName, setNewSubName] = useState('');
+            const [newTopicName, setNewTopicName] = useState('');
+            const [addingTopicTo, setAddingTopicTo] = useState(null);
+
+            const startEdit = (id, currentVal) => {
+                setEditingId(id);
+                setEditValue(currentVal);
+            };
+
+            const saveEdit = (type, obj) => {
+                if (type === 'subject') onUpdateSubject(obj.id, editValue);
+                else onUpdateTopic(obj.id, editValue);
+                setEditingId(null);
+            };
+
+            const handleAddSubject = () => {
+                if(newSubName.trim()) {
+                    onAddSubject(newSubName);
+                    setNewSubName('');
                 }
+            };
+
+            const handleAddTopic = (subjectId) => {
+                if(newTopicName.trim()) {
+                    onAddTopic(subjectId, newTopicName);
+                    setNewTopicName('');
+                    setAddingTopicTo(null);
+                }
+            };
+
+            return (
+                <div className="fade-in max-w-4xl mx-auto pb-12 w-full">
+                    <header className="mb-12 pt-4 flex justify-between items-end">
+                        <div>
+                            <h1 className="text-3xl font-serif font-bold mb-2">Edital Verticalizado</h1>
+                            <p className="text-sm font-mono text-gray-500">Gestão de Conteúdo e Revisões</p>
+                        </div>
+                    </header>
+
+                    <div className="mb-8 flex gap-4">
+                        <input className="bg-transparent border-b-line p-2 flex-1 font-serif" placeholder="Nova Disciplina..." value={newSubName} onChange={e => setNewSubName(e.target.value)} />
+                        <button onClick={handleAddSubject} className="text-xs font-mono uppercase border-line px-4 hover:bg-[#2D2D2D] hover:text-white transition-colors">Adicionar</button>
+                    </div>
+
+                    <div className="space-y-12">
+                        {subjects.map(sub => {
+                            const subTopics = topics.filter(t => t.subjectId === sub.id);
+                            return (
+                                <div key={sub.id}>
+                                    <div className="flex items-center justify-between border-b-line pb-2 mb-6 group">
+                                        <div className="flex items-center gap-2 flex-1">
+                                            {editingId === sub.id ? (
+                                                <input className="edit-input text-xl font-serif font-bold" autoFocus value={editValue} onChange={e => setEditValue(e.target.value)} onBlur={() => saveEdit('subject', sub)} onKeyDown={e => e.key === 'Enter' && saveEdit('subject', sub)} />
+                                            ) : (
+                                                <>
+                                                    <h2 className="text-xl font-serif font-bold">{sub.name}</h2>
+                                                    <button onClick={() => startEdit(sub.id, sub.name)} className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-black"><Icon name="pencil" size={14}/></button>
+                                                </>
+                                            )}
+                                        </div>
+                                        <button onClick={() => onDeleteSubject(sub.id)} className="opacity-0 group-hover:opacity-100 text-red-300 hover:text-red-500"><Icon name="trash-2" size={14}/></button>
+                                    </div>
+
+                                    <div className="space-y-3 pl-4 border-l border-lines">
+                                        {subTopics.map(topic => (
+                                            <div key={topic.id} className="flex items-center justify-between py-2 group">
+                                                <div className="flex-1 pr-4 flex items-center gap-2">
+                                                    {editingId === topic.id ? (
+                                                        <input className="edit-input text-sm font-serif" autoFocus value={editValue} onChange={e => setEditValue(e.target.value)} onBlur={() => saveEdit('topic', topic)} onKeyDown={e => e.key === 'Enter' && saveEdit('topic', topic)} />
+                                                    ) : (
+                                                        <>
+                                                            <span className={`text-sm font-serif ${topic.t && topic.r > 0 && topic.q ? 'strikethrough' : ''}`}>{topic.title}</span>
+                                                            <button onClick={() => startEdit(topic.id, topic.title)} className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-black"><Icon name="pencil" size={12}/></button>
+                                                        </>
+                                                    )}
+                                                </div>
+                                                <div className="flex gap-4 font-mono text-xs select-none items-center">
+                                                    <span onClick={() => onToggleTopic(topic.id, 't')} className={`trq-toggle ${topic.t ? 'active' : ''}`}>[T]</span>
+                                                    <span onClick={() => onToggleTopic(topic.id, 'r')} className={`trq-toggle ${topic.r > 0 ? 'active' : ''}`}>[R{topic.r > 0 ? topic.r : ''}]</span>
+                                                    <span onClick={() => onToggleTopic(topic.id, 'q')} className={`trq-toggle ${topic.q ? 'active' : ''}`}>[Q]</span>
+                                                    <button onClick={() => onDeleteTopic(topic.id)} className="opacity-0 group-hover:opacity-100 text-red-300 hover:text-red-500 ml-2"><Icon name="x" size={12}/></button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        
+                                        {addingTopicTo === sub.id ? (
+                                            <div className="flex gap-2 items-center py-2">
+                                                <input autoFocus className="bg-transparent border-b border-dashed border-gray-300 text-sm font-serif w-full" placeholder="Nome do tópico..." value={newTopicName} onChange={e => setNewTopicName(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddTopic(sub.id)} />
+                                                <button onClick={() => handleAddTopic(sub.id)} className="text-xs font-mono text-green-600">OK</button>
+                                                <button onClick={() => setAddingTopicTo(null)} className="text-xs font-mono text-gray-400">X</button>
+                                            </div>
+                                        ) : (
+                                            <button onClick={() => setAddingTopicTo(sub.id)} className="text-xs font-mono text-gray-400 hover:text-gray-600 mt-2 flex items-center gap-1">
+                                                <Icon name="plus" size={12}/> Adicionar Tópico
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- AUTH SCREEN ---
+        const AuthScreen = ({ onLogin }) => {
+            const [isRegister, setIsRegister] = useState(false);
+            const [formData, setFormData] = useState({ username: '', password: '' });
+            const [error, setError] = useState('');
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                setError('');
+                if(!formData.username || !formData.password) return setError('Preencha todos os campos');
 
                 const users = JSON.parse(localStorage.getItem('studyApp_users') || '[]');
-                
-                if (this.state.isRegister) {
-                    if (users.find(u => u.username === this.state.username)) {
-                        this.setState({ error: 'Usuário já existe' });
-                        return;
-                    }
-                    const newUser = { 
-                        username: this.state.username, 
-                        password: this.state.password 
-                    };
+                if (isRegister) {
+                    if (users.find(u => u.username === formData.username)) return setError('Usuário já existe');
+                    const newUser = { username: formData.username, password: formData.password };
                     localStorage.setItem('studyApp_users', JSON.stringify([...users, newUser]));
-                    this.props.onLogin(newUser);
+                    onLogin(newUser);
                 } else {
-                    const user = users.find(u => 
-                        u.username === this.state.username && 
-                        u.password === this.state.password
-                    );
-                    if (user) {
-                        this.props.onLogin(user);
-                    } else {
-                        this.setState({ error: 'Credenciais inválidas' });
-                    }
+                    const user = users.find(u => u.username === formData.username && u.password === formData.password);
+                    if (user) onLogin(user);
+                    else setError('Credenciais inválidas');
                 }
-            }
+            };
 
-            render() {
-                return React.createElement('div', {
-                    className: 'min-h-screen flex items-center justify-center fade-in'
-                },
-                    React.createElement('div', {
-                        className: 'w-full max-w-md p-8 border-line bg-white/50 rounded-lg text-center'
-                    },
-                        React.createElement('div', { className: 'mb-6 flex justify-center' },
-                            React.createElement('div', {
-                                className: 'p-4 rounded-full bg-[#E3D5CA] text-[#2D2D2D]'
-                            }, React.createElement(Icon, { name: 'book-open', size: 32 }))
-                        ),
-                        React.createElement('h1', {
-                            className: 'text-3xl font-serif font-bold mb-2'
-                        }, 'Planejamento de Estudos'),
-                        React.createElement('p', {
-                            className: 'text-gray-500 font-mono text-xs mb-8 uppercase tracking-widest'
-                        }, 'Foco. Clareza. Resultado.'),
+            return (
+                <div className="min-h-screen flex items-center justify-center fade-in px-4">
+                    <div className="w-full max-w-md p-8 border-line bg-white/50 rounded-lg text-center">
+                        <div className="mb-6 flex justify-center"><div className="p-4 rounded-full bg-[#E3D5CA] text-[#2D2D2D]"><Icon name="book-open" size={32} /></div></div>
+                        <h1 className="text-3xl font-serif font-bold mb-2">Planejamento de Estudos</h1>
+                        <p className="text-gray-500 font-mono text-xs mb-8 uppercase tracking-widest">Foco. Clareza. Resultado.</p>
                         
-                        React.createElement('form', {
-                            onSubmit: this.handleSubmit,
-                            className: 'space-y-4 text-left'
-                        },
-                            this.state.error && React.createElement('div', {
-                                className: 'text-xs text-[#A63D40] font-mono text-center mb-4'
-                            }, this.state.error),
-                            
-                            React.createElement('input', {
-                                type: 'text',
-                                value: this.state.username,
-                                onChange: e => this.setState({ username: e.target.value }),
-                                className: 'w-full bg-transparent border-b-line p-2 font-serif text-lg focus:border-[#2D2D2D]',
-                                placeholder: 'Usuário'
-                            }),
-                            
-                            React.createElement('input', {
-                                type: 'password',
-                                value: this.state.password,
-                                onChange: e => this.setState({ password: e.target.value }),
-                                className: 'w-full bg-transparent border-b-line p-2 font-serif text-lg focus:border-[#2D2D2D]',
-                                placeholder: 'Senha'
-                            }),
-                            
-                            React.createElement('button', {
-                                type: 'submit',
-                                className: 'btn-primary w-full mt-4'
-                            }, this.state.isRegister ? 'Criar Conta' : 'Entrar')
-                        ),
-                        
-                        React.createElement('div', {
-                            className: 'mt-6 pt-6 border-t-line'
-                        },
-                            React.createElement('button', {
-                                onClick: () => {
-                                    this.setState({ 
-                                        isRegister: !this.state.isRegister,
-                                        error: '',
-                                        username: '',
-                                        password: ''
-                                    });
-                                },
-                                className: 'text-xs font-mono text-gray-500 hover:text-[#2D2D2D] underline decoration-dotted'
-                            }, this.state.isRegister ? 'Já tenho conta? Entrar' : 'Não tem conta? Cadastrar')
-                        )
-                    )
-                );
-            }
-        }
+                        <form onSubmit={handleSubmit} className="space-y-4 text-left">
+                            {error && <div className="text-xs text-[#A63D40] font-mono text-center mb-4">{error}</div>}
+                            <input type="text" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="w-full bg-transparent border-b-line p-2 font-serif text-lg focus:border-[#2D2D2D]" placeholder="Usuário" />
+                            <input type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full bg-transparent border-b-line p-2 font-serif text-lg focus:border-[#2D2D2D]" placeholder="Senha" />
+                            <button className="w-full bg-[#2D2D2D] text-[#FDFBF7] py-3 mt-4 font-mono uppercase tracking-widest text-sm hover:bg-black transition-colors">
+                                {isRegister ? 'Criar Conta' : 'Entrar'}
+                            </button>
+                        </form>
+                        <div className="mt-6 pt-6 border-t-line">
+                            <button onClick={() => { setIsRegister(!isRegister); setError(''); }} className="text-xs font-mono text-gray-500 hover:text-[#2D2D2D] underline decoration-dotted">
+                                {isRegister ? 'Já tenho conta? Entrar' : 'Não tem conta? Cadastrar'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
 
-        // Plan List
-        class PlanList extends React.Component {
-            constructor(props) {
-                super(props);
-                this.state = {
-                    plans: [],
-                    showNewModal: false,
-                    newPlanName: ''
-                };
-            }
+        // --- LISTA DE PLANOS ---
+        const PlanList = ({ user, onSelectPlan, onLogout }) => {
+            const [plans, setPlans] = useState([]);
+            const [showNewModal, setShowNewModal] = useState(false);
+            const [newPlanName, setNewPlanName] = useState('');
+            
+            useEffect(() => {
+                const userPlans = JSON.parse(localStorage.getItem(`app_plans_${user.username}`) || '[]');
+                setPlans(userPlans);
+            }, [user]);
 
-            componentDidMount() {
-                this.loadPlans();
-            }
-
-            loadPlans = () => {
-                const userPlans = JSON.parse(localStorage.getItem(`app_plans_${this.props.user.username}`) || '[]');
-                this.setState({ plans: userPlans });
-            }
-
-            createPlan = (e) => {
+            const createPlan = (e) => {
                 e.preventDefault();
-                if (!this.state.newPlanName) return;
-                
+                if (!newPlanName) return;
                 const newPlan = {
                     id: Date.now().toString(),
-                    title: this.state.newPlanName,
-                    examDate: '',
+                    title: newPlanName,
+                    examDate: "",
                     subjects: INITIAL_SUBJECTS,
                     topics: INITIAL_TOPICS,
                     sessions: [],
                     queueIds: INITIAL_SUBJECTS.map(s => s.id),
                     createdAt: new Date().toISOString()
                 };
-                
-                const updatedPlans = [...this.state.plans, newPlan];
-                this.setState({ plans: updatedPlans, showNewModal: false, newPlanName: '' });
-                localStorage.setItem(`app_plans_${this.props.user.username}`, JSON.stringify(updatedPlans));
-            }
+                const updatedPlans = [...plans, newPlan];
+                setPlans(updatedPlans);
+                localStorage.setItem(`app_plans_${user.username}`, JSON.stringify(updatedPlans));
+                setShowNewModal(false);
+                setNewPlanName('');
+            };
 
-            deletePlan = (id, e) => {
+            const deletePlan = (id, e) => {
                 e.stopPropagation();
                 if (confirm('Tem certeza que deseja excluir?')) {
-                    const updated = this.state.plans.filter(p => p.id !== id);
-                    this.setState({ plans: updated });
-                    localStorage.setItem(`app_plans_${this.props.user.username}`, JSON.stringify(updated));
+                    const updated = plans.filter(p => p.id !== id);
+                    setPlans(updated);
+                    localStorage.setItem(`app_plans_${user.username}`, JSON.stringify(updated));
                 }
-            }
+            };
 
-            render() {
-                return React.createElement('div', {
-                    className: 'min-h-screen flex flex-col items-center justify-center fade-in p-4'
-                },
-                    React.createElement('div', {
-                        className: 'w-full max-w-2xl'
-                    },
-                        React.createElement('header', {
-                            className: 'flex justify-between items-end mb-8 border-b-line pb-4'
-                        },
-                            React.createElement('div', null,
-                                React.createElement('h1', {
-                                    className: 'text-3xl font-serif font-bold mb-1'
-                                }, 'Seus Cadernos'),
-                                React.createElement('p', {
-                                    className: 'text-xs font-mono text-gray-400 uppercase tracking-widest'
-                                }, `Olá, ${this.props.user.username}`)
-                            ),
-                            React.createElement('button', {
-                                onClick: this.props.onLogout,
-                                className: 'text-xs font-mono text-[#A63D40] hover:underline'
-                            }, 'Sair')
-                        ),
-                        
-                        React.createElement('div', {
-                            className: 'grid gap-4 md:grid-cols-2'
-                        },
-                            React.createElement('button', {
-                                onClick: () => this.setState({ showNewModal: true }),
-                                className: 'border-line border-dashed p-8 flex flex-col items-center justify-center gap-4 text-gray-400 hover:text-[#2D2D2D] hover:border-[#2D2D2D] transition-colors group h-48'
-                            },
-                                React.createElement(Icon, { name: 'plus', size: 32 }),
-                                React.createElement('span', {
-                                    className: 'font-mono text-xs uppercase tracking-widest'
-                                }, 'Novo Plano')
-                            ),
-                            
-                            this.state.plans.map(p =>
-                                React.createElement('div', {
-                                    key: p.id,
-                                    onClick: () => this.props.onSelectPlan(p.id),
-                                    className: 'border-line p-6 relative group hover:border-[#2D2D2D] transition-colors cursor-pointer bg-white/50 h-48 flex flex-col justify-between'
-                                },
-                                    React.createElement('div', null,
-                                        React.createElement('h3', {
-                                            className: 'font-serif font-bold text-xl mb-2'
-                                        }, p.title),
-                                        React.createElement('p', {
-                                            className: 'text-xs font-mono text-gray-500'
-                                        }, `Prova: ${p.examDate ? new Date(p.examDate).toLocaleDateString() : 'Indefinida'}`)
-                                    ),
-                                    React.createElement('div', {
-                                        className: 'flex justify-between items-end'
-                                    },
-                                        React.createElement('span', {
-                                            className: 'text-xs font-mono text-gray-400'
-                                        }, `${p.topics.length} Tópicos`),
-                                        React.createElement('button', {
-                                            onClick: (e) => this.deletePlan(p.id, e),
-                                            className: 'icon-btn opacity-0 group-hover:opacity-100'
-                                        }, React.createElement(Icon, { name: 'trash-2', size: 16 }))
-                                    )
-                                )
-                            )
-                        ),
-                        
-                        this.state.showNewModal && React.createElement('div', {
-                            className: 'modal-overlay'
-                        },
-                            React.createElement('div', {
-                                className: 'modal-content'
-                            },
-                                React.createElement('h3', {
-                                    className: 'font-serif font-bold text-xl mb-6'
-                                }, 'Novo Plano de Estudos'),
-                                React.createElement('input', {
-                                    autoFocus: true,
-                                    value: this.state.newPlanName,
-                                    onChange: e => this.setState({ newPlanName: e.target.value }),
-                                    className: 'w-full bg-transparent border-b-line p-2 font-serif text-lg mb-6 focus:border-[#2D2D2D]',
-                                    placeholder: 'Nome do Concurso'
-                                }),
-                                React.createElement('div', {
-                                    className: 'flex gap-4'
-                                },
-                                    React.createElement('button', {
-                                        onClick: () => this.setState({ showNewModal: false }),
-                                        className: 'btn-secondary flex-1'
-                                    }, 'Cancelar'),
-                                    React.createElement('button', {
-                                        onClick: this.createPlan,
-                                        disabled: !this.state.newPlanName,
-                                        className: 'btn-primary flex-1 disabled:opacity-50'
-                                    }, 'Criar')
-                                )
-                            )
-                        )
-                    )
-                );
-            }
-        }
+            return (
+                <div className="min-h-screen flex flex-col items-center justify-center fade-in p-4">
+                    <div className="w-full max-w-2xl">
+                        <header className="flex justify-between items-end mb-8 border-b-line pb-4">
+                            <div>
+                                <h1 className="text-3xl font-serif font-bold mb-1">Seus Cadernos</h1>
+                                <p className="text-xs font-mono text-gray-400 uppercase tracking-widest">Olá, {user.username}</p>
+                            </div>
+                            <button onClick={onLogout} className="text-xs font-mono text-[#A63D40] hover:underline">Sair</button>
+                        </header>
 
-        // Main App
-        class App extends React.Component {
-            constructor(props) {
-                super(props);
-                this.state = {
-                    user: null,
-                    activePlan: null
+                        <div className="grid gap-4 md:grid-cols-2">
+                            <button onClick={() => setShowNewModal(true)} className="border-line border-dashed p-8 flex flex-col items-center justify-center gap-4 text-gray-400 hover:text-[#2D2D2D] hover:border-[#2D2D2D] transition-colors group h-48">
+                                <Icon name="plus" size={32} />
+                                <span className="font-mono text-xs uppercase tracking-widest">Novo Plano</span>
+                            </button>
+
+                            {plans.map(p => (
+                                <div key={p.id} onClick={() => onSelectPlan(p.id)} className="border-line p-6 relative group hover:border-[#2D2D2D] transition-colors cursor-pointer bg-white/50 h-48 flex flex-col justify-between">
+                                    <div>
+                                        <h3 className="font-serif font-bold text-xl mb-2">{p.title}</h3>
+                                        <p className="text-xs font-mono text-gray-500">Prova: {p.examDate ? new Date(p.examDate).toLocaleDateString() : 'Indefinida'}</p>
+                                    </div>
+                                    <div className="flex justify-between items-end">
+                                        <span className="text-xs font-mono text-gray-400">{p.topics.length} Tópicos</span>
+                                        <button onClick={(e) => deletePlan(p.id, e)} className="text-gray-300 hover:text-[#A63D40] opacity-0 group-hover:opacity-100 transition-opacity"><Icon name="trash-2" size={16} /></button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {showNewModal && (
+                        <div className="fixed inset-0 bg-black/10 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                            <div className="bg-[#FDFBF7] border-line p-8 rounded shadow-xl w-full max-w-sm">
+                                <h3 className="font-serif font-bold text-xl mb-6">Novo Plano de Estudos</h3>
+                                <input autoFocus value={newPlanName} onChange={e => setNewPlanName(e.target.value)} className="w-full bg-transparent border-b-line p-2 font-serif text-lg mb-6 focus:border-[#2D2D2D]" placeholder="Nome do Concurso" />
+                                <div className="flex gap-4">
+                                    <button onClick={() => setShowNewModal(false)} className="flex-1 py-3 border-line font-mono text-xs uppercase tracking-widest hover:bg-gray-100">Cancelar</button>
+                                    <button onClick={createPlan} disabled={!newPlanName} className="flex-1 py-3 bg-[#2D2D2D] text-[#FDFBF7] font-mono text-xs uppercase tracking-widest hover:bg-black disabled:opacity-50">Criar</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // --- COMPONENTE: WORKSPACE ---
+        const StudyWorkspace = ({ user, plan, onBack }) => {
+            const [view, setView] = useState('dashboard');
+            const [items, setItems] = useState(plan.topics || []);
+            const [settings, setSettings] = useState({ title: plan.title, examDate: plan.examDate });
+            const [sessions, setSessions] = useState(plan.sessions || []);
+            const [subjects, setSubjects] = useState(plan.subjects || []);
+            const [queueIds, setQueueIds] = useState(plan.queueIds || []);
+            const [activeSubject, setActiveSubject] = useState(null);
+            
+            const [suggestionModalOpen, setSuggestionModalOpen] = useState(false);
+            const [suggestion, setSuggestion] = useState(null);
+
+            // Persistência Centralizada
+            useEffect(() => {
+                const allPlans = JSON.parse(localStorage.getItem(`app_plans_${user.username}`) || '[]');
+                const updatedPlans = allPlans.map(p => {
+                    if (p.id === plan.id) {
+                        return { 
+                            ...p, 
+                            title: settings.title,
+                            examDate: settings.examDate,
+                            topics: items, 
+                            sessions: sessions,
+                            subjects: subjects,
+                            queueIds: queueIds
+                        };
+                    }
+                    return p;
+                });
+                localStorage.setItem(`app_plans_${user.username}`, JSON.stringify(updatedPlans));
+            }, [items, settings, sessions, subjects, queueIds, user.username, plan.id]);
+
+            const queueSubjects = useMemo(() => queueIds.map(id => subjects.find(s => s.id === id)).filter(Boolean), [queueIds, subjects]);
+
+            const dailyStats = useMemo(() => {
+                const today = new Date().toISOString().split('T')[0];
+                const todaySessions = sessions.filter(s => s.date.startsWith(today));
+                return {
+                    questions: todaySessions.reduce((acc, s) => acc + (s.questions || 0), 0),
+                    reviews: items.filter(t => t.lastInteraction && t.lastInteraction.startsWith(today) && t.r > 0).length,
+                    time: Math.floor(todaySessions.reduce((acc, s) => acc + s.executedSeconds, 0) / 60)
                 };
-            }
+            }, [sessions, items]);
 
-            componentDidMount() {
+            const rotateQueue = () => setQueueIds(prev => { const [first, ...rest] = prev; return [...rest, first]; });
+
+            const handlePlay = (subject) => { if (!subject) return; setActiveSubject(subject); setView('pomodoro'); };
+
+            const handleFinishSession = (sessionData) => {
+                const newSession = { id: Date.now(), date: new Date().toISOString(), ...sessionData };
+                setSessions(prev => [newSession, ...prev]);
+                rotateQueue();
+                setActiveSubject(null);
+                setView('dashboard');
+            };
+
+            const handleSuggestStudy = () => {
+                if (queueSubjects.length === 0) return;
+                const nextSubject = queueSubjects[0];
+                const subjectTopics = items.filter(t => t.subjectId === nextSubject.id);
+                let recommendedTopic = subjectTopics.find(t => !t.t);
+                if (!recommendedTopic) recommendedTopic = subjectTopics.sort((a,b) => (a.lastInteraction ? new Date(a.lastInteraction) : 0) - (b.lastInteraction ? new Date(b.lastInteraction) : 0))[0];
+
+                setSuggestion({
+                    subject: nextSubject.name,
+                    topic: recommendedTopic ? recommendedTopic.title : "Revisão Geral",
+                    reason: recommendedTopic && !recommendedTopic.t ? "Teoria pendente" : "Revisão agendada"
+                });
+                setSuggestionModalOpen(true);
+            };
+
+            // Edital Actions
+            const handleAddSubject = (name) => {
+                const newId = 's_' + Date.now();
+                setSubjects(prev => [...prev, { id: newId, name, weight: 1 }]);
+                setQueueIds(prev => [...prev, newId]);
+            };
+            const handleUpdateSubject = (id, name) => setSubjects(prev => prev.map(s => s.id === id ? { ...s, name } : s));
+            const handleDeleteSubject = (id) => {
+                if(confirm('Excluir disciplina?')) {
+                    setSubjects(prev => prev.filter(s => s.id !== id));
+                    setItems(prev => prev.filter(t => t.subjectId !== id));
+                    setQueueIds(prev => prev.filter(qid => qid !== id));
+                }
+            };
+            const handleAddTopic = (subjectId, title) => setItems(prev => [...prev, { id: 't_' + Date.now(), subjectId, title, t: false, r: 0, q: false, lastInteraction: null }]);
+            const handleUpdateTopic = (id, title) => setItems(prev => prev.map(t => t.id === id ? { ...t, title } : t));
+            const handleDeleteTopic = (id) => setItems(prev => prev.filter(t => t.id !== id));
+            const handleToggleTopic = (id, type) => setItems(prev => prev.map(t => {
+                if (t.id !== id) return t;
+                let updated = { ...t, lastInteraction: new Date().toISOString() };
+                if (type === 'r') updated.r = (t.r + 1) > 3 ? 0 : t.r + 1;
+                else updated[type] = !t[type];
+                return updated;
+            }));
+
+            const [isEditingTitle, setIsEditingTitle] = useState(false);
+            const [isEditingDate, setIsEditingDate] = useState(false);
+
+            return (
+                <div className="flex h-screen overflow-hidden">
+                    <aside className="w-16 md:w-20 border-r-line flex flex-col items-center py-8 gap-8 bg-[#FDFBF7] z-50">
+                        <div className="mb-4 cursor-pointer" onClick={onBack} title="Voltar aos Planos">
+                            <div className="w-8 h-8 bg-[#2D2D2D] rounded-sm flex items-center justify-center text-[#FDFBF7]"><span className="font-serif font-bold text-lg">E</span></div>
+                        </div>
+                        <nav className="flex flex-col gap-6 w-full">
+                            {[{ id: 'dashboard', icon: 'layout' }, { id: 'syllabus', icon: 'list-tree' }, { id: 'data', icon: 'bar-chart-2' }].map(item => (
+                                <button key={item.id} onClick={() => setView(item.id)} className={`w-full py-3 flex justify-center transition-all group ${view === item.id ? 'text-[#2D2D2D]' : 'text-gray-300 hover:text-gray-500'} relative`}>
+                                    <Icon name={item.icon} size={22} />
+                                    {view === item.id && <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[3px] h-6 bg-[#2D2D2D]" />}
+                                </button>
+                            ))}
+                        </nav>
+                    </aside>
+
+                    <main className="flex-1 overflow-y-auto p-8 md:p-12 relative">
+                        <div className="fixed inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: 'linear-gradient(#000 1px, transparent 1px)', backgroundSize: '100% 2rem' }}></div>
+                        <div className="relative z-10 h-full max-w-5xl mx-auto">
+                            {view === 'dashboard' && (
+                                <div className="flex flex-col h-full fade-in">
+                                    <header className="flex justify-between items-end border-b-line pb-4 mb-12">
+                                        <div className="flex-1">
+                                            <span className="text-xs font-mono text-gray-400 uppercase tracking-widest block mb-1">Foco Atual</span>
+                                            {isEditingTitle ? (
+                                                <input className="edit-input text-2xl font-serif text-[#2D2D2D] font-bold" autoFocus value={settings.title} onChange={e => setSettings({...settings, title: e.target.value})} onBlur={() => setIsEditingTitle(false)} onKeyDown={e => e.key === 'Enter' && setIsEditingTitle(false)} />
+                                            ) : (
+                                                <h1 className="text-2xl font-serif text-[#2D2D2D] cursor-pointer hover:underline decoration-dotted decoration-gray-300 underline-offset-4" onClick={() => setIsEditingTitle(true)}>{settings.title}</h1>
+                                            )}
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="text-xs font-mono text-gray-400 uppercase tracking-widest block mb-1">Data da Prova</span>
+                                            {isEditingDate ? (
+                                                <input type="date" className="edit-input font-mono text-right text-[#A63D40]" value={settings.examDate} onChange={e => setSettings({...settings, examDate: e.target.value})} onBlur={() => setIsEditingDate(false)} autoFocus />
+                                            ) : (
+                                                <span className="text-xl font-mono text-[#A63D40] cursor-pointer hover:underline decoration-dotted" onClick={() => setIsEditingDate(true)}>
+                                                    {calculateDaysLeft(settings.examDate)} DIAS
+                                                </span>
+                                            )}
+                                        </div>
+                                    </header>
+
+                                    <div className="flex-1 flex flex-col items-center justify-center mb-12">
+                                        <div className="relative w-72 h-72 flex items-center justify-center mb-10">
+                                            <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
+                                                <circle cx="50" cy="50" r="45" fill="none" stroke="#E0E0E0" strokeWidth="1" />
+                                                <circle cx="50" cy="50" r="45" fill="none" stroke="#2D2D2D" strokeWidth="2" strokeDasharray="210 280" strokeLinecap="square" />
+                                            </svg>
+                                            <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center">
+                                                <span className="text-[10px] font-mono text-gray-400 mb-2">AGORA</span>
+                                                <h2 className="text-2xl font-bold font-serif leading-tight text-[#2D2D2D] break-words w-full">
+                                                    {queueSubjects[0]?.name || 'Adicione Matérias'}
+                                                </h2>
+                                            </div>
+                                        </div>
+
+                                        {queueSubjects.length > 0 && (
+                                            <div className="flex items-center gap-8">
+                                                <button onClick={rotateQueue} className="flex flex-col items-center gap-2 text-gray-400 hover:text-[#A63D40] transition-colors group">
+                                                    <div className="w-12 h-12 border-line rounded-full flex items-center justify-center group-hover:border-[#A63D40] transition-colors"><Icon name="skip-forward" size={20} /></div>
+                                                    <span className="text-[10px] font-mono uppercase tracking-widest">Pular</span>
+                                                </button>
+                                                <button onClick={() => handlePlay(queueSubjects[0])} className="flex flex-col items-center gap-3 group">
+                                                    <div className="w-24 h-24 bg-[#2D2D2D] text-[#FDFBF7] rounded-full flex items-center justify-center shadow-xl hover:scale-105 transition-transform">
+                                                        <Icon name="play" size={40} className="ml-1" />
+                                                    </div>
+                                                    <span className="text-xs font-mono font-bold uppercase tracking-widest text-[#2D2D2D]">Estudar</span>
+                                                </button>
+                                                <button onClick={handleSuggestStudy} className="flex flex-col items-center gap-2 text-gray-400 hover:text-blue-600 transition-colors group">
+                                                    <div className="w-12 h-12 border-line rounded-full flex items-center justify-center group-hover:border-blue-600 transition-colors"><Icon name="lightbulb" size={20} /></div>
+                                                    <span className="text-[10px] font-mono uppercase tracking-widest">Sugestão</span>
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        <div className="mt-12 text-center">
+                                            <span className="text-[10px] font-mono text-gray-400 uppercase tracking-widest block mb-2">A SEGUIR</span>
+                                            <div className="py-2 px-6 border-line inline-block bg-white/50">
+                                                <span className="font-serif text-gray-600">{queueSubjects[1]?.name || '...'}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <footer className="mt-auto border-t-line pt-4 flex flex-col md:flex-row justify-between text-sm font-mono text-gray-500 gap-2">
+                                        <div className="flex gap-6"><span className="flex items-center gap-2"><Icon name="check-circle" size={14}/> {dailyStats.questions} Questões</span><span className="flex items-center gap-2"><Icon name="rotate-cw" size={14}/> {dailyStats.reviews} Revisões</span></div>
+                                        <div><span className="flex items-center gap-2">Tempo Líquido: {Math.floor(dailyStats.time / 60)}h {dailyStats.time % 60}m</span></div>
+                                    </footer>
+                                    
+                                    <Modal isOpen={suggestionModalOpen} title="Próximo Passo Recomendado" onClose={() => setSuggestionModalOpen(false)}>
+                                        {suggestion && (
+                                            <div className="space-y-4">
+                                                <div className="p-4 border-line bg-white/50">
+                                                    <span className="text-xs font-mono text-gray-400 uppercase">Disciplina</span>
+                                                    <p className="text-lg font-bold font-serif text-[#2D2D2D]">{suggestion.subject}</p>
+                                                </div>
+                                                <div className="p-4 border-line bg-white/50">
+                                                    <span className="text-xs font-mono text-gray-400 uppercase">Tópico</span>
+                                                    <p className="text-lg font-serif text-gray-700">{suggestion.topic}</p>
+                                                </div>
+                                                <div className="p-4 bg-[#E3D5CA]/20 border border-[#E3D5CA] rounded">
+                                                    <span className="text-xs font-mono text-gray-500 uppercase">Por que?</span>
+                                                    <p className="text-sm font-serif italic text-gray-600">{suggestion.reason}</p>
+                                                </div>
+                                                <button onClick={() => { setSuggestionModalOpen(false); handlePlay(subjects.find(s => s.name === suggestion.subject)); }} className="w-full bg-[#2D2D2D] text-[#FDFBF7] py-3 font-mono text-xs uppercase tracking-widest hover:bg-black">
+                                                    Iniciar Agora
+                                                </button>
+                                            </div>
+                                        )}
+                                    </Modal>
+                                </div>
+                            )}
+
+                            {view === 'pomodoro' && activeSubject && <Pomodoro subject={activeSubject} onFinish={handleFinishSession} onCancel={() => setView('dashboard')} />}
+                            {view === 'syllabus' && <Syllabus subjects={subjects} topics={items} onAddSubject={handleAddSubject} onAddTopic={handleAddTopic} onUpdateSubject={handleUpdateSubject} onUpdateTopic={handleUpdateTopic} onDeleteSubject={handleDeleteSubject} onDeleteTopic={handleDeleteTopic} onToggleTopic={handleToggleTopic} />}
+                            {view === 'data' && <DataAnalytics sessions={sessions} subjects={subjects} />}
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        // --- COMPONENTE PRINCIPAL (ORQUESTRADOR) ---
+        const App = () => {
+            const [user, setUser] = useState(null);
+            const [activePlan, setActivePlan] = useState(null);
+
+            // Recupera usuário ao recarregar a página
+            useEffect(() => {
                 const savedUser = localStorage.getItem('study_user');
-                if (savedUser) {
-                    this.setState({ user: JSON.parse(savedUser) });
-                }
-            }
+                if (savedUser) setUser(JSON.parse(savedUser));
+            }, []);
 
-            handleLogin = (user) => {
-                this.setState({ user });
-                localStorage.setItem('study_user', JSON.stringify(user));
-            }
+            const handleLogin = (loggedUser) => {
+                setUser(loggedUser);
+                localStorage.setItem('study_user', JSON.stringify(loggedUser));
+            };
 
-            handleLogout = () => {
-                this.setState({ user: null, activePlan: null });
+            const handleLogout = () => {
+                setUser(null);
+                setActivePlan(null);
                 localStorage.removeItem('study_user');
-            }
+            };
 
-            handleSelectPlan = (planId) => {
-                const plans = JSON.parse(localStorage.getItem(`app_plans_${this.state.user.username}`) || '[]');
+            const handleSelectPlan = (planId) => {
+                // Carrega o plano completo do storage para garantir que está atualizado
+                const plans = JSON.parse(localStorage.getItem(`app_plans_${user.username}`) || '[]');
                 const plan = plans.find(p => p.id === planId);
-                this.setState({ activePlan: plan });
-            }
+                setActivePlan(plan);
+            };
 
-            handleBackToPlans = () => {
-                this.setState({ activePlan: null });
-            }
+            const handleBackToPlans = () => setActivePlan(null);
 
-            render() {
-                if (!this.state.user) {
-                    return React.createElement(AuthScreen, { onLogin: this.handleLogin });
-                }
-                
-                if (!this.state.activePlan) {
-                    return React.createElement(PlanList, {
-                        user: this.state.user,
-                        onSelectPlan: this.handleSelectPlan,
-                        onLogout: this.handleLogout
-                    });
-                }
+            if (!user) return <AuthScreen onLogin={handleLogin} />;
+            if (!activePlan) return <PlanList user={user} onSelectPlan={handleSelectPlan} onLogout={handleLogout} />;
+            return <StudyWorkspace user={user} plan={activePlan} onBack={handleBackToPlans} />;
+        };
 
-                // Retornar um placeholder para o workspace (simplificado por agora)
-                return React.createElement('div', {
-                    className: 'min-h-screen flex flex-col items-center justify-center'
-                },
-                    React.createElement('h1', {
-                        className: 'text-2xl font-serif mb-4'
-                    }, 'Workspace - Em construção'),
-                    React.createElement('button', {
-                        onClick: this.handleBackToPlans,
-                        className: 'btn-secondary'
-                    }, 'Voltar aos Planos'),
-                    React.createElement('p', {
-                        className: 'mt-4 text-gray-500'
-                    }, `Plano selecionado: ${this.state.activePlan.title}`)
-                );
-            }
-        }
-
-        // Renderizar a aplicação
-        ReactDOM.render(
-            React.createElement(App),
-            document.getElementById('root')
-        );
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
     </script>
 </body>
 </html>
